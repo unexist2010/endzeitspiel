@@ -1,0 +1,286 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+  <meta name="theme-color" content="#000000" />
+  <meta name="mobile-web-app-capable" content="yes" />
+  <meta name="apple-mobile-web-app-capable" content="yes" />
+  <meta name="apple-mobile-web-app-status-bar-style" content="black" />
+  <meta name="apple-mobile-web-app-title" content="Endzeit" />
+  <link rel="manifest" href="manifest.webmanifest" />
+  <link rel="icon" type="image/png" sizes="32x32" href="icons/icon-32.png" />
+  <link rel="apple-touch-icon" href="icons/apple-touch-icon.png" />
+  <title>Willkommen auf Endzeitspiel.de — dem textbasierten Browsergame</title>
+  <link rel="shortcut icon" href="assets/ico/favicon.ico" />
+  <link rel="stylesheet" href="styles.css?v=7" />
+</head>
+<body class="ingame">
+  <div class="navbar navbar-fixed-top" hidden>
+    <div class="navbar-inner">
+      <div class="headerbox">
+        <img id="banner-img" class="headerimage js-banner" src="assets/header/title_day.jpg" alt="Endzeitspiel" />
+      </div>
+      <div class="container-fluid topbar">
+        <a class="brand" href="#" id="brand-home">Endzeitspiel</a>
+        <span class="topbar-meta">
+          <span id="header-clock">—</span>
+          <span id="save-indicator" class="save-indicator" aria-live="polite"></span>
+          <a href="#" id="btn-help">Hilfe</a>
+        </span>
+      </div>
+    </div>
+  </div>
+
+  <div class="page-wrap">
+
+    <!-- Spiel -->
+    <section id="screen-game">
+      <!-- Mobil (unter 800 px): Kopfleiste mit Werten, unten Reiter für die Menügruppen. Am Desktop ausgeblendet. -->
+      <div id="m-top" class="m-only" role="button" tabindex="0" aria-label="Spielerinfo und Ressourcen öffnen"></div>
+      <div id="orig-game">
+        <aside id="orig-left"></aside>
+        <div id="orig-mid">
+          <div class="orig-head">
+            <div class="knot-plate" aria-hidden="true">
+              <svg viewBox="0 0 64 48" width="56" height="42">
+                <polygon points="32,3 60,44 4,44" fill="none" stroke="#c9a24a" stroke-width="3"/>
+                <polygon points="32,14 48,38 16,38" fill="none" stroke="#c9a24a" stroke-width="2"/>
+                <path d="M32 8 L32 40 M18 36 L46 36 M22 28 L42 20" fill="none" stroke="#c9a24a" stroke-width="1.4"/>
+              </svg>
+            </div>
+            <div class="head-art">
+              <img src="assets/header/header.jpg" alt="" />
+              <div class="head-clock" id="orig-head-clock">--:--:-- UHR</div>
+            </div>
+          </div>
+          <div id="orig-sheet"></div>
+        </div>
+        <aside id="orig-right"></aside>
+      </div>
+      <div id="m-scrim" class="m-only" hidden></div>
+      <nav id="m-tabs" class="m-only" aria-label="Menü">
+        <button type="button" data-mtab="nachrichten"><span class="mi">✉</span>Nachrichten</button>
+        <button type="button" data-mtab="charakter"><span class="mi">☺</span>Charakter</button>
+        <button type="button" data-mtab="aktionen"><span class="mi">⚒</span>Aktionen</button>
+        <button type="button" data-mtab="community"><span class="mi">☷</span>Community</button>
+        <button type="button" data-mtab="mehr"><span class="mi">▤</span>Res./Stamm</button>
+      </nav>
+      <div class="legacy-sink" hidden>
+      <div class="container-fluid">
+        <div class="row-fluid">
+          <div class="span2">
+            <div class="well sidebar-nav">
+              <ul class="nav nav-list" id="game-nav">
+                <li class="nav-header">Spiel</li>
+                <li class="active"><a href="#" data-tab="ag">Jetzt</a></li>
+                <li><a href="#" data-tab="map">Karte</a></li>
+                <li><a href="#" data-tab="jobs">Berufe</a></li>
+                <li><a href="#" data-tab="inv">Inventar</a></li>
+                <li><a href="#" data-tab="craft">Herstellen</a></li>
+                <li><a href="#" data-tab="trade">Markt</a></li>
+                <li><a href="#" data-tab="quests">Quests</a></li>
+                <li><a href="#" data-tab="build">Gebäude</a></li>
+                <li><a href="#" data-tab="stamm">Stamm</a></li>
+                <li><a href="#" data-tab="karma">Karma</a></li>
+                <li class="nav-header">Konto</li>
+                <li><a href="#" id="btn-help-hud">Hilfe</a></li>
+                <li><a href="#" id="btn-save">Speichern</a></li>
+                <li><a href="#" id="btn-logout">Logout</a></li>
+                <li><a href="#" id="btn-reset" class="danger-link">Neuer Charakter</a></li>
+              </ul>
+            </div>
+          </div>
+          <div class="span7">
+            <div class="frame">
+              <div class="frame-top"><img src="assets/gfx/table_main/11.gif" alt="" /><span class="frame-edge"></span><img src="assets/gfx/table_main/13.gif" alt="" /></div>
+              <div class="frame-mid">
+                <div class="frame-side side-l"></div>
+                <div class="frame-body">
+                  <div class="main-unit">
+                    <div id="result-banner" class="result-banner" aria-live="polite"></div>
+                    <div id="progress-bar-wrap"><div id="progress-bar"></div></div>
+                    <div id="status-line">Bereit.</div>
+                    <div id="equipped-strip" class="equipped-strip"></div>
+
+                    <div id="tab-ag">
+                      <h3>Was kannst du jetzt tun?</h3>
+                      <p class="here-line">Ort: <strong id="loc-title">—</strong> <span id="loc-coords" class="hint"></span></p>
+                      <p class="hint" id="here-blurb">Große Knöpfe reisen selbst zum nächsten passenden Ort und legen los. Darunter: was du genau hier tun kannst.</p>
+                      <div id="tutorial-box" class="tutorial-box"></div>
+                      <div class="act-grid" id="core-loop">
+                        <button type="button" class="act-btn" id="btn-core-holz">Holz sammeln<small>nächster Wald</small></button>
+                        <button type="button" class="act-btn" id="btn-core-holz5">5× Holz sammeln<small>nacheinander</small></button>
+                        <button type="button" class="act-btn" id="btn-core-stein">Stein abbauen<small>nächster Steinbruch</small></button>
+                        <button type="button" class="act-btn" id="btn-core-wasser">Wasser suchen<small>nächste Oase</small></button>
+                        <button type="button" class="act-btn" id="btn-core-graben">Graben<small>nächster Ort außer Camp</small></button>
+                        <button type="button" class="act-btn" id="btn-core-graben5">5× Graben<small>nacheinander</small></button>
+                        <button type="button" class="act-btn" id="btn-core-graben10">10× Graben<small>nacheinander</small></button>
+                        <button type="button" class="act-btn fight" id="btn-core-kampf">Jagen / Kämpfen<small>nächster Ort mit Gegner</small></button>
+                      </div>
+                      <p class="hint">Keine Aktionspunkte. Nur Nahrung und Wasser begrenzen Wiederholungen. Holz geht nicht leer.</p>
+                      <h4>Hier vor Ort</h4>
+                      <div class="act-grid" id="action-list"></div>
+                      <h4>Karte</h4>
+                      <p class="hint">Punkte nach Koordinaten. Hell = erreichbar, blass = gesperrt. Maus zeigt Name, Felder, Tätigkeit und Sperre.</p>
+                      <div id="home-travel" class="map-grid"></div>
+                      <p><a href="#" id="btn-open-map">Alle Orte auf der Karte</a> · Beruf: <strong id="home-job">—</strong> · <a href="#" id="btn-open-jobs">Berufe</a></p>
+                      <p class="hint">TL = Techlevel. Höheres TL schaltet Berufe frei, nicht die Karte.</p>
+                    </div>
+
+                    <div id="tab-map" class="hidden">
+                      <h3>Karte</h3>
+                      <p class="hint">Aktueller Ort ist weiß umrandet. Klick auf einen hellen Punkt startet die Reise. Tooltip: Name, Entfernung, Tätigkeit, sofort erreichbar oder EP-Sperre.</p>
+                      <div class="map-grid" id="map-grid"></div>
+                    </div>
+
+                    <div id="tab-jobs" class="hidden">
+                      <h3>Berufe</h3>
+                      <p>Aktueller Beruf: <strong id="job-current">—</strong></p>
+                      <p class="hint">TL = Techlevel. Höheres TL schaltet Berufe frei, nicht die Karte.</p>
+                      <p class="hint">„Jetzt erlernbar“ = ein Klick. Sonst steht die genaue Freischaltung (DESIGN-Schwellen).</p>
+                      <div id="job-list" class="job-list"></div>
+                    </div>
+
+                    <div id="tab-inv" class="hidden">
+                      <h3>Inventar</h3>
+                      <div id="inv-grid"></div>
+                    </div>
+
+                    <div id="tab-craft" class="hidden">
+                      <h3>Herstellen</h3>
+                      <p class="hint" id="craft-hint">Craft hängt von Beruf und Techlevel ab.</p>
+                      <div class="action-list" id="craft-list"></div>
+                    </div>
+
+                    <div id="tab-trade" class="hidden">
+                      <h3>Markt</h3>
+                      <p class="hint">Handel im <strong>Ruinencamp</strong> oder in einer <strong>Händlerhöhle</strong>.</p>
+                      <div class="action-list" id="trade-list"></div>
+                    </div>
+
+                    <div id="tab-quests" class="hidden">
+                      <h3>Quests</h3>
+                      <div class="quest-list" id="quest-list"></div>
+                    </div>
+
+                    <div id="tab-build" class="hidden">
+                      <h3>Gebäude</h3>
+                      <p class="hint">Privatgebäude nur im <strong>Ruinencamp</strong>.</p>
+                      <div class="build-list" id="build-list"></div>
+                    </div>
+
+                    <div id="tab-stamm" class="hidden">
+                      <h3>Stamm</h3>
+                      <div id="stamm-panel"></div>
+                    </div>
+
+                    <div id="tab-karma" class="hidden">
+                      <h3>Karma</h3>
+                      <div id="karma-panel"></div>
+                    </div>
+                  </div>
+                </div>
+                <div class="frame-side side-r"></div>
+              </div>
+              <div class="frame-bot"><img src="assets/gfx/table_main/31.gif" alt="" /><span class="frame-edge"></span><img src="assets/gfx/table_main/33.gif" alt="" /></div>
+            </div>
+          </div>
+          <div class="span3">
+            <div class="well status-well">
+              <h4>Dein Status</h4>
+              <p class="char-name" id="char-name">—</p>
+              <p class="pos-line">Aktuell: <span id="stat-loc">—</span> (<span id="stat-coords">—</span>)</p>
+              <table class="stat-table">
+                <tr><td>Rasse</td><td id="stat-race">—</td></tr>
+                <tr><td>Techlevel</td><td id="stat-tl">—</td></tr>
+                <tr><td>Beruf</td><td id="stat-job">—</td></tr>
+                <tr><td>EP / CP</td><td id="stat-ep">—</td></tr>
+                <tr><td>KEP</td><td id="stat-kep">—</td></tr>
+                <tr><td>Karma</td><td id="stat-karma">—</td></tr>
+              </table>
+              <h4>Bedürfnisse</h4>
+              <table class="stat-table">
+                <tr><td><i class="res-nahrung"></i> Nahrung</td><td id="stat-food" class="need">—</td></tr>
+                <tr><td><i class="res-wasser"></i> Wasser</td><td id="stat-water" class="need">—</td></tr>
+              </table>
+              <p class="hint">Körperwerte. Rucksack steht im Inventar. ≤ −10 = Tod.</p>
+              <h4><i class="res-gold"></i> Gold</h4>
+              <p class="gold-line" id="stat-gold">—</p>
+              <h4>Rohstoffe</h4>
+              <div id="res-strip" class="res-strip"></div>
+              <h4>Eigenschaften</h4>
+              <ul class="stat-list" id="attr-list"></ul>
+            </div>
+          </div>
+        </div>
+        <div class="well log-dock" id="log-dock">
+          <h4>Ereignislog</h4>
+          <div id="log"></div>
+        </div>
+      </div>
+      </div>
+    </section>
+  </div>
+
+  <div id="fight-overlay" class="fight-overlay hidden" aria-live="polite">
+    <div class="fight-box frame-body">
+      <h3>Kampf</h3>
+      <div class="fight-sides">
+        <div class="fight-side you">
+          <div class="fight-label">Du</div>
+          <div id="fight-you-name" class="fight-name">—</div>
+          <div class="hp-bar"><div id="fight-you-hp" class="hp-fill"></div></div>
+          <div id="fight-you-hp-text" class="hp-text">—</div>
+          <div id="fight-you-kp" class="kp-text">KP —</div>
+        </div>
+        <div class="fight-vs">vs</div>
+        <div class="fight-side foe">
+          <img id="fight-foe-img" src="" alt="" />
+          <div id="fight-foe-name" class="fight-name">—</div>
+          <div class="hp-bar"><div id="fight-foe-hp" class="hp-fill foe"></div></div>
+          <div id="fight-foe-hp-text" class="hp-text">—</div>
+          <div id="fight-foe-kp" class="kp-text">KP —</div>
+        </div>
+      </div>
+      <div id="fight-round" class="fight-round">Runde —</div>
+      <div id="fight-result" class="fight-result hidden"></div>
+      <div id="fight-log" class="fight-log"></div>
+      <div class="fight-footer">
+        <span id="fight-weapon">Waffe: —</span>
+        <button type="button" id="btn-fight-close" class="hidden btn btn-warning">Weiter</button>
+      </div>
+    </div>
+  </div>
+
+  <div id="dead-overlay" class="dead-overlay hidden">
+    <div class="box">
+      <h3 class="dead-title">Du bist gestorben</h3>
+      <p>Nahrung oder Wasser sind auf −10 oder darunter gefallen.</p>
+      <button type="button" class="btn btn-warning" id="btn-dead-restart">Neuen Charakter erstellen</button>
+    </div>
+  </div>
+
+  <div id="help-overlay" class="help-overlay hidden" role="dialog" aria-modal="true" aria-labelledby="help-title">
+    <div class="help-box">
+      <h3 id="help-title">Kurzanleitung</h3>
+      <div class="help-body">
+        <p><strong>Start:</strong> Es gibt keinen Login. Ein gespeicherter Stand wird geladen, sonst startet der Wanderer direkt im Spiel.</p>
+        <p><strong>Jetzt:</strong> Ort, große Aktionen (Kämpfen oben), nächste Reiseziele. Ereignislog und „Angelegt“ bleiben auf jeder Seite sichtbar.</p>
+        <p><strong>Menü:</strong> Karte (sofort erreichbar), Berufe (jetzt erlernbar oder Bedingung), Inventar, Herstellen, Markt, Quests, Stamm, Karma.</p>
+        <p><strong>Bedürfnisse:</strong> Nahrung und Wasser sinken. Bei ≤ −10 ist der Charakter tot. Status rechts.</p>
+        <p><strong>Techlevel 0–9, Stamm ab 25 EP, Karma</strong> Hell/Dunkel. Schwellen teils DESIGN (siehe STATUS.md).</p>
+      </div>
+      <div class="help-actions">
+        <label class="help-dismiss-label"><input type="checkbox" id="help-dont-show" checked /> Beim Start nicht mehr automatisch zeigen</label>
+        <button type="button" class="btn btn-warning" id="btn-help-close">Verstanden</button>
+      </div>
+    </div>
+  </div>
+
+  <script src="wiki-catalog.js?v=7"></script>
+  <script src="app.js?v=7"></script>
+  <script src="mobile.js?v=7"></script>
+  <script src="pwa.js?v=7"></script>
+</body>
+</html>
