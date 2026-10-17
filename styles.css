@@ -851,3 +851,11 @@ body.ingame .dead-overlay { background: #000; color: #eee; }
   #orig-game[data-mopen] #orig-left, #orig-game[data-mopen="mehr"] #orig-right { bottom: calc(50px + env(safe-area-inset-bottom)); max-height: calc(100vh - 110px); }
   .orig-head { display: none; } /* Querformat: Höhe für den Inhalt, Uhrzeit steht in der Spielerinfo */
 }
+/* Schmale Handys: Tabellenzeilen stapeln (Name/Info, Kosten, Aktion untereinander) statt rechts abzuschneiden */
+@media (max-width: 480px) {
+  #orig-sheet table, #orig-sheet tbody, #orig-sheet tr, #orig-sheet td, #orig-sheet th { display: block; width: auto !important; max-width: 100%; }
+  #orig-sheet table { overflow: visible; }
+  #orig-sheet tr { border-bottom: 1px solid #555; padding: 6px 0; }
+  #orig-sheet td, #orig-sheet th { padding: 1px 2px; text-align: left !important; }
+  #orig-sheet td:empty { display: none; }
+}
