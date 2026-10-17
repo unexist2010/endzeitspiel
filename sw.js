@@ -1,6 +1,6 @@
 // Service Worker Endzeitspiel (PWA). Bei jeder neuen Version VERSION hochzählen, dann wird der Cache erneuert.
 // Code und Seite (HTML/JS/CSS/Manifest): Netz zuerst, Cache als Rückfall (offline). Bilder: Cache zuerst.
-const VERSION = "ezs-pwa-5";
+const VERSION = "ezs-pwa-6";
 const PRECACHE = [
   "./",
   "index.html",
@@ -20,6 +20,7 @@ const PRECACHE = [
   "assets/gfx/brunnen2.jpg",
   "assets/gfx/ezs.gif",
   "assets/gfx/farm2.jpg",
+  "assets/gfx/graben.jpg",
   "assets/gfx/lines.gif",
   "assets/gfx/logo.jpg",
   "assets/gfx/menu.gif",

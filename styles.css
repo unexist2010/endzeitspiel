@@ -859,3 +859,85 @@ body.ingame .dead-overlay { background: #000; color: #eee; }
   #orig-sheet td, #orig-sheet th { padding: 1px 2px; text-align: left !important; }
   #orig-sheet td:empty { display: none; }
 }
+
+/* ===== Durchgang 7: Aufgaben, Ort im HUD, Erkunden/Graben, Herstellen, Status ===== */
+.mbox a.loc-link { display: flex; text-transform: uppercase; color: #eee; padding: 2px 6px; cursor: pointer; border-bottom: 1px dotted #555; }
+.mbox a.loc-link span:last-child { color: #e6c35c; text-align: right; }
+.mbox a.loc-link:hover span:last-child { color: #fff2c4; text-decoration: underline; }
+.p7-guide { padding-bottom: 6px; }
+.p7-guide a { text-transform: none; font-size: 11px; }
+.p7-guide .p7-chap { margin: 2px 6px 3px; color: #e6c35c; font-size: 11px; font-weight: bold; }
+.p7-guide ul { list-style: none; margin: 0 4px 4px; padding: 0; }
+.p7-guide li.p7-task { font-size: 11px; line-height: 1.3; padding: 1px 2px; color: #ddd; }
+.p7-guide li.p7-task.done { color: #8fbf7a; }
+.p7-guide li.p7-task.now { color: #fff; font-weight: bold; }
+.p7-guide li.p7-task.locked { color: #888; }
+.p7-guide .p7-mark { display: inline-block; width: 11px; color: #c9a24a; }
+.p7-guide .p7-hint { margin: 3px 6px; font-size: 11px; color: #bbb; line-height: 1.3; }
+.p7-guide .p7-links { display: block; margin: 0 0 2px; }
+.p7-guide .p7-links a { display: inline; padding: 0 0 0 6px; }
+.p7-guide .p7-all { margin-top: 3px; font-weight: bold; }
+.p7-prog { color: #e6c35c; font-weight: normal; white-space: nowrap; }
+.p7-small { font-size: 11px; color: #aaa; }
+.p7-new { margin: 3px 6px; padding: 3px 5px; font-size: 11px; color: #13200f; background: #a9d18e; border-radius: 2px; }
+.p7-mini { display: none; }
+#orig-sheet .p7-cost { color: #b9b9b9; font-size: 11px; white-space: normal; }
+#orig-sheet .p7-cost::before { content: "· "; color: #777; }
+#orig-sheet .p7-btnrow { margin: 6px 0; }
+#orig-sheet a.p7-btn { display: inline-block; padding: 4px 12px; background: #4a3e22; border: 1px solid #c9a24a; color: #fff2c4; text-decoration: none; font-weight: bold; }
+#orig-sheet a.p7-btn:hover { background: #5c4d2a; }
+.p7-pic { float: right; margin: 0 0 8px 12px; }
+.p7-art { display: block; width: 240px; max-width: 100%; height: auto; border: 1px solid #111; }
+.p7-here { display: flex; gap: 14px; align-items: flex-start; flex-wrap: wrap; background: #2f2f2f; border: 1px solid #555; padding: 8px 10px; margin: 0 0 8px; }
+.p7-here-t { flex: 1 1 180px; min-width: 0; }
+.p7-nav { display: grid; grid-template-columns: repeat(3, 34px); grid-template-rows: repeat(3, 30px); gap: 3px; flex: 0 0 auto; }
+#orig-sheet .p7-nav a { display: flex; align-items: center; justify-content: center; background: #1f1f1f; border: 1px solid #777; color: #e6c35c; text-decoration: none; font-weight: bold; font-size: 12px; }
+#orig-sheet .p7-nav a:hover { border-color: #c9a24a; color: #fff2c4; }
+#orig-sheet .p7-nav a.p7-nav-map { font-size: 10px; font-weight: normal; color: #ddd; }
+table.p7-hist, table.p7-explain { width: 100%; border-collapse: collapse; margin: 4px 0 10px; clear: both; }
+table.p7-hist th, table.p7-explain th { text-align: left; color: #e6c35c; font-weight: normal; border-bottom: 1px solid #666; padding: 3px 4px; }
+table.p7-hist td, table.p7-explain td { border-bottom: 1px solid #333; padding: 3px 4px; vertical-align: top; }
+table.p7-hist td:first-child { white-space: nowrap; color: #aaa; }
+table.p7-explain td:first-child { white-space: nowrap; }
+.p7-ul { margin: 0 0 8px 18px; padding: 0; }
+.p7-ul li { margin: 0 0 3px; }
+#orig-sheet h3 { clear: both; }
+.p7-craft { display: flex; gap: 10px; align-items: flex-start; padding: 6px; margin: 0 0 6px; background: #303030; border: 1px solid #484848; }
+.p7-craft.can { border-color: #8a7536; }
+.p7-craft.lock { opacity: 0.75; }
+.p7-craft img { width: 40px; height: 40px; flex: 0 0 40px; object-fit: contain; background: #161616; image-rendering: auto; }
+.p7-craft-b { flex: 1 1 auto; min-width: 0; }
+.p7-craft-b p { margin: 0 0 3px !important; }
+.p7-use { color: #cfcfcf; }
+.p7-ing { display: inline-block; padding: 0 5px; margin: 0 3px 2px 0; border: 1px solid #555; background: #222; font-size: 11px; }
+.p7-ing.ok { color: #a9d18e; border-color: #4f6b3f; }
+.p7-ing.miss { color: #f0a080; border-color: #6b3f3f; }
+details.p7-more, details.p7-ch { margin: 6px 0; border: 1px solid #484848; background: #303030; padding: 4px 8px; }
+details.p7-more > summary, details.p7-ch > summary { cursor: pointer; color: #e6c35c; font-weight: bold; padding: 2px 0; }
+details.p7-ch.done > summary { color: #8fbf7a; }
+details.p7-ch.future > summary { color: #aaa; }
+details.p7-ch ol { margin: 4px 0 4px 18px; padding: 0; }
+details.p7-ch li { margin: 0 0 6px; }
+details.p7-ch li.done { color: #8fbf7a; }
+details.p7-ch li.locked { opacity: 0.7; }
+.p7-ico { vertical-align: middle; margin-right: 4px; background: #161616; }
+#m-top .ms-loc { grid-column: 1 / -1; flex-direction: row; gap: 6px; align-items: baseline; color: #e6c35c; text-decoration: underline; text-underline-offset: 2px; }
+@media (max-width: 800px), (pointer: coarse) and (max-height: 520px) and (max-width: 1100px) {
+  .p7-mini { display: block !important; margin: 0 0 8px; background: #2a2416; border: 1px solid #8a7536; padding: 0 8px; }
+  #orig-sheet .p7-mini a { display: flex; flex-wrap: wrap; gap: 0 6px; color: #fff; text-decoration: none; padding: 6px 0; }
+  #orig-sheet .p7-mini b { color: #e6c35c; }
+  .p7-mini .p7-new { margin: 0 0 6px; }
+  #orig-game[data-mopen="mehr"] .mbox.p7-guide[data-mg="mehr"] { display: block; }
+  #orig-game[data-mopen] .mbox.p7-guide a { min-height: 44px; display: inline-flex; align-items: center; text-transform: none; }
+  #orig-game[data-mopen] .mbox.p7-guide li.p7-task, #orig-game[data-mopen] .mbox.p7-guide .p7-hint { font-size: 13px; }
+  .p7-pic { float: none; margin: 0 0 8px; }
+  .p7-art { width: 100%; max-height: 110px; object-fit: cover; }
+  .p7-nav { grid-template-columns: repeat(3, 48px); grid-template-rows: repeat(3, 44px); }
+  #orig-sheet .p7-nav a { min-height: 44px; min-width: 44px; font-size: 14px; }
+  #orig-sheet .p7-nav a.p7-nav-map { font-size: 12px; }
+  #orig-sheet .p7-cost { display: block; font-size: 12px; margin: 2px 0 4px; }
+  #orig-sheet .p7-cost::before { content: ""; }
+  #orig-sheet a.p7-btn { min-height: 44px; padding: 8px 16px; }
+  .p7-small, .p7-ing { font-size: 12px; }
+  .mbox a.loc-link { min-height: 40px; align-items: center; }
+}

@@ -34,6 +34,9 @@
       ["Strahlung", val(right, "strahlenlast")], ["Essen", val(right, "nahrung")], ["Wasser", val(right, "wasser")], ["Gold", val(right, "gold")],
     ];
     var html = items.map(function (it) { return '<span class="ms"><b>' + it[0] + "</b>" + it[1] + "</span>"; }).join("");
+    // Durchgang 7: aktueller Ort (Name + Koordinaten), Tipp öffnet die Landkarte
+    var loc = right.querySelector("a.loc-link");
+    if (loc && loc.children.length >= 2) html = '<span class="ms ms-loc" role="link" tabindex="0" aria-label="Landkarte öffnen"><b>Ort</b>' + loc.children[1].textContent.trim() + "</span>" + html;
     if (html !== lastTop) { top.innerHTML = html; lastTop = html; }
   }
   function setOpen(g) {
@@ -57,7 +60,12 @@
     var g = b.getAttribute("data-mtab");
     setOpen(game.getAttribute("data-mopen") === g ? null : g);
   });
-  top.addEventListener("click", function () { setOpen(game.getAttribute("data-mopen") === "mehr" ? null : "mehr"); });
+  top.addEventListener("click", function (e) {
+    var l = e.target && e.target.closest ? e.target.closest(".ms-loc") : null;
+    var a = l && right.querySelector("a.loc-link");
+    if (a) { setOpen(null); a.click(); window.scrollTo(0, 0); return; } // Ort → Landkarte
+    setOpen(game.getAttribute("data-mopen") === "mehr" ? null : "mehr");
+  });
   if (scrim) scrim.addEventListener("click", function () { setOpen(null); });
   document.addEventListener("keydown", function (e) { if (e.key === "Escape" && game.getAttribute("data-mopen")) setOpen(null); });
   // Nach einem Tipp auf einen Link in der Schublade: zu und nach oben, damit die neue Seite sichtbar ist.

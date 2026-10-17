@@ -150,6 +150,18 @@ Live unter **https://unexist2010.github.io/endzeitspiel/** (Repo `unexist2010/en
 - Behoben: Handy quer bekam das Desktop-Layout mit winzigen Links → mobile Ansicht auch für Touch-Geräte bis 520 px Höhe (Kennwerte in einer Zeile, niedrige Reiter, Kopfbild ausgeblendet); sichere Ränder (Notch) links/rechts; Kopfleisten- und Reiter-Beschriftung 11 px statt 10 px, Kartenzahlen mobil 11 px statt 9 px; Überschriften in der Schublade ohne versetzten menu.gif-Balken; Tablet/Querformat: Kennwerte in einer Zeile, Schublade 3-spaltig; „im Bau (noch X s)“ in der Stammgebäude-Tabelle läuft jetzt live mit.
 - Version: Service-Worker-Cache `ezs-pwa-5`, `?v=11` (zuletzt: Service Worker lädt am HTTP-Cache vorbei, damit Updates sofort ankommen; Tabellenzeilen unter 480 px gestapelt, kein schwarzer Streifen unter kurzen Seiten, Tabellenzellen oben ausgerichtet).
 
+## Durchgang 7 (17.10.2026)
+
+- **Aufgaben** (Menü „Dein Charakter → Aufgaben“, Kasten rechts / mobil Zeile über dem Inhalt und in der Schublade „Res./Stamm“): 10 Kapitel mit je 5 Aufgaben. Die Aufgaben 1–4 gehen in beliebiger Reihenfolge, die 5. (★) schließt das Kapitel ab. Zähler und Erkennung laufen automatisch, Belohnung je Aufgabe EP+Gold, je Kapitel zusätzlich 5 CP (DESIGN). Hinweise mit Links (hin: Ort · Seite). Das alte Tutorial ist in Kapitel 1 aufgegangen (Holz 40, Stein 30, Stock, Stock mit Stein, Holzhütte); Schrottfeld öffnet nach den Aufgaben 1–4. Nebenquests mit „einlösen“ auf der Aufgaben-Seite. Gespeichert in `state.guide`/`state.p7` (Spielstand v3, bestehende Stände: Erfülltes wird ohne Belohnung abgehakt).
+- **Herstellen** (Aktionen → Herstellen): Karte je Rezept mit Bild, Zutaten „hast/brauchst“ (grün/rot), „im Rucksack: n“, Verwendungszweck, Kosten. Bilder: Rohstoffe/Fahrzeuge aus den Wiki-Archiv-GIFs, sonst erzeugte Symbole `assets/items/*.png` (`tools/gen_item_icons.py`).
+- **Status**: Tabelle „Was die Werte bedeuten“ (Wirkung laut Wiki, aktueller Wert, nächster Punkt) plus Kennwerte. Neu wirksam (DESIGN-Faktoren): Kraft:Intelligenz 3:1 bei den Kampfpunkten, Wahrnehmung skaliert den Kleiderbonus (voll bei 501), Geschwindigkeit verkürzt Fußreisen (−3 %/Punkt, max −45 %) und Kampfrunden (900 ms −4 %/Punkt, min 450 ms), Ausdauer senkt Tränke-Nebenwirkungen (−3 %/Punkt, max 60 %), Ausstrahlung = Handelskontingent 300 + 100/Punkt je Stunde, Dynamik/Wahrnehmung bei Erkunden.
+- **Erkunden**: Entdeckung ca. 18–20 % am Anfang (+1 %/Dynamik, +0,5 %/Wahrnehmung, Pferd ×1,25, max 45 %), kleine Funde ~40 % passend zum Gelände, Kosten am Knopf, Standort, N/O/S/W + Landkarte, Verlauf der letzten 20 Versuche.
+- **Graben**: Bild, Erklärung (Funde, Wahrnehmung, Geschwindigkeit, Werkzeug, Bodenarten), Standort mit Boden, 1×/5×/10× mit Kosten, N/O/S/W + Landkarte, Verlauf 20. Gräbt hier auf dem Feld (nicht im Ruinencamp; Felsboden braucht Spitzhacke/Greifer, Glasfläche Dynamit).
+- **Kosten/Wirkung** an allen Aktionsknöpfen; die Ergebniszeile nennt die echte Änderung (z. B. „Müdigkeit +3 (jetzt 12 %), Energie −2 (jetzt 92 %)“).
+- **Ort im HUD**: Desktop in der Spielerinfo, mobil in der Kopfleiste; Klick/Tipp öffnet die Landkarte.
+- **Tests**: `node tests/smoke-pass7.js` (Node), `node tests/playtest-pass7/p7.js` (Chrome, Desktop + Handy, Screenshots in `tests/playtest-pass7/shots` bzw. `SHOT_DIR`); in `run-all.js` aufgenommen.
+- Version: Service-Worker-Cache `ezs-pwa-6`, `?v=12`.
+
 ## Speichern & Migration
 
 - Autosave nach Reisen, AGs, Kampf, Craft, Quests, Needs-Tick, Karma-Aktionen.

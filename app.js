@@ -883,11 +883,10 @@
     {
       id: "stock_stein",
       label: "Stock mit Stein",
-      desc: "10 Holz + 10 Stein (Wiki). +16 KP. Braucht Waffentechniker.",
+      desc: "10 Holz + 10 Stein (Wiki). +16 KP. Wiki: Waffentechniker; Prototyp: ab Start für alle (DESIGN, Durchgang 7 – Aufgaben Kapitel 1).",
       cost: { Holz: 10, Stein: 10 },
       result: { "Stock mit Stein": 1 },
-      minTL: 1,
-      needJob: "Waffentechniker",
+      minTL: 0, // DESIGN (Wiki: Waffentechniker, TL1) – wie der Stock für Anfänger freigegeben
     },
     {
       id: "messer",
@@ -2199,7 +2198,7 @@
     if (fight.foeHP <= 0) { endFight(true); return; }
     if (fight.youHP <= 0) { endFight(false); return; }
     if (fight.round >= fight.roundsMax) { endFight(fight.youHP >= fight.foeHP); return; }
-    setTimeout(fightRound, 900);
+    setTimeout(fightRound, p7FightDelay()); // Durchgang 7: Geschwindigkeit (Wiki)
   }
   function endFight(won) {
     if (!fight || fight.done) return;
@@ -3138,6 +3137,7 @@
     if (headClock) headClock.textContent = hh + ":" + mm + ":" + g0("second") + " UHR";
     right.innerHTML =
       '<div class="mbox"><h3>Spielerinfo</h3>' +
+      p7HudLocHtml() +
       '<div class="infoline"><span>Erfahrung:</span><span>' + state.ep + "</span></div>" +
       '<div class="infoline"><span>Müdigkeit:</span><span>' + (state.fatigue || 0) + '%</span></div>' +
       '<div class="infoline"><span>Strahlenlast:</span><span>' + (state.radiation || 0) + '%</span></div>' +
@@ -3146,11 +3146,12 @@
       (sleepUi ? '<div class="infoline"><span>Zustand:</span><span>schläft</span></div>' : "") +
       '<div class="infoline"><span>Zeit:</span><span id="orig-clock">' + hh + ":" + mm + " Uhr</span></div>" +
       '<a class="cp-link" href="#" data-page="status">' + state.cp + " CPs verfügbar Klicke hier.</a></div>" +
+      p7GuideBoxHtml() +
       '<div class="mbox"><h3>Ressourcen</h3>' + res + "</div>" +
       boxes(state.stamm ? ORIG_MENUS.right : [["Stamm", [["gruendung", "Gründung"], ["beitreten", "Beitreten"]]]]);
     const note = (resultLines.length && resultPage === origPage) ? resultLines[resultLines.length - 1] : null;
     const noteHtml = note ? '<p class="orig-result' + (note.bad ? " bad" : "") + '">' + origEsc(note.text) + "</p>" : "";
-    sheet.innerHTML = noteHtml + renderOrigPage();
+    sheet.innerHTML = (origPage !== "aufgaben" ? p7GuideMiniHtml() : "") + noteHtml + renderOrigPage();
   }
 
   // --- Render ---
@@ -8444,6 +8445,779 @@
     document.querySelectorAll("#orig-sheet .p6-build-left").forEach((l) => { l.textContent = String(p5BuildLeft(st)); }); // Balkenzeile und Tabellenzeile
   }
   setInterval(p6BuildTick, 250);
+
+  // =====================================================================
+  // Durchgang 7: Aufgaben (Leitfaden in Kapiteln), Ort im HUD, Erkunden und Graben neu,
+  // Herstellen mit Bildern, Status-Erklärungen, Kosten an allen Aktionsknöpfen,
+  // fehlende Eigenschafts-Wirkungen. Alles hier ist DESIGN, außer wo WIKI steht.
+  // =====================================================================
+  const P7_HIST_MAX = 20; // DESIGN: so viele Einträge im Verlauf
+  const P7_ERK_MS = 2000; // DESIGN: ein Erkundungsgang dauert 2 s (≙ 15 Minuten)
+  function p7(s) {
+    s = s || state;
+    if (!s.p7) s.p7 = {};
+    const p = s.p7;
+    ["acts", "crafted", "found", "visited", "cnt"].forEach((k) => { if (!p[k] || typeof p[k] !== "object") p[k] = {}; });
+    ["erkHist", "digHist"].forEach((k) => { if (!Array.isArray(p[k])) p[k] = []; });
+    if (!p.trade) p.trade = { since: 0, units: 0 };
+    return p;
+  }
+  function p7Count(k, n) { const p = p7(); p.cnt[k] = (p.cnt[k] || 0) + (n || 1); }
+  function p7Time(ts) {
+    const parts = new Intl.DateTimeFormat("de-AT", { timeZone: "Europe/Vienna", hour: "2-digit", minute: "2-digit", hourCycle: "h23" }).formatToParts(new Date(ts));
+    const g = (k) => (parts.find((x) => x.type === k) || {}).value || "00";
+    return g("hour") + ":" + g("minute");
+  }
+  function p7Pos(s) {
+    s = s || state;
+    if (typeof s.px === "number" && typeof s.py === "number") return { x: s.px, y: s.py };
+    const l = LOCATIONS.find((x) => x.id === s.locId);
+    return l ? { x: l.x, y: l.y } : { x: 50, y: 100 };
+  }
+  const P7_TERRAIN = ["Ödland", "Steppe", "Geröllfeld", "Ruinenfeld", "Dünen", "Trockenwiese"]; // DESIGN: Namen freier Felder
+  function p7FieldName(x, y) {
+    const pl = placeAt(x, y);
+    if (pl) return pl.name;
+    const g = groundAt(x, y);
+    if (g === "glas") return "Glasfläche";
+    if (g === "hart") return "Felsboden";
+    return P7_TERRAIN[(((x * 31) ^ (y * 17)) >>> 0) % P7_TERRAIN.length];
+  }
+  function p7GroundText(g) { return g === "glas" ? "Glasboden (Dynamit nötig)" : g === "hart" ? "harter Boden (Spitzhacke oder Greifer nötig)" : "normaler Boden"; }
+  function p7LocText(s) { const p = p7Pos(s); return p7FieldName(p.x, p.y) + " " + p.x + "/" + p.y; }
+  function p7Dir(dx, dy) {
+    if (Math.abs(dx) > 2 * Math.abs(dy)) return dx > 0 ? "östlich" : "westlich";
+    if (Math.abs(dy) > 2 * Math.abs(dx)) return dy > 0 ? "südlich" : "nördlich";
+    return (dy < 0 ? "nord" : "süd") + (dx > 0 ? "östlich" : "westlich");
+  }
+
+  // ---------- Kosten-Anzeige für jede Aktion ----------
+  function p7FatAdd(kind) { let f = kind === "fight" ? 8 : 3; if (state.race === "Mutant") f += 1; return f; } // wie exert()
+  function p7WorkSec(aid) {
+    if (aid === "graben") return Math.round(digMs(state) / 1000);
+    const d = ACTIONS[aid]; return Math.max(1, Math.round(((d && d.duration) || 4000) / 1000));
+  }
+  /** Kurzer Kostentext. kind: work | fight | sleep | craft | erkunden | move */
+  function p7CostText(kind, aid, n) {
+    n = n || 1;
+    if (kind === "fight") return "Sieg: Müdigkeit +" + p7FatAdd("fight") + " · Energie −6 · Nahrung −1 · Wasser −1 · Niederlage: Gold −25 % (mind. 3), Nahrung −3, Wasser −3";
+    if (kind === "move") return "1 Feld · keine Energie · sofort";
+    if (kind === "sleep") {
+      const m = sleepSpot(state).mult;
+      return "Müdigkeit −" + Math.round(100 * m) + " · Energie +" + Math.round(100 * m) + " (bis 100 %) · Strahlung −" + Math.round(30 * m) + " · Dauer " + Math.round(sleepDuration(state) / 1000) + " s";
+    }
+    if (kind === "craft") return "Müdigkeit +" + p7FatAdd("craft") + " · Energie −2 · sofort";
+    if (kind === "erkunden") return "Energie −2 · Müdigkeit +" + p7FatAdd("work") + " · Dauer " + Math.round(P7_ERK_MS / 1000) + " s (≙ 15 Min.)";
+    if (aid === "rest") return "Müdigkeit −15 · Energie +10 · 1 s";
+    const needs = (aid === "cave" || aid === "visit") ? "" : " · Nahrung −" + n + " · Wasser −" + n;
+    return "Energie −" + (2 * n) + " · Müdigkeit +" + (p7FatAdd("work") * n) + needs + " · Dauer " + (p7WorkSec(aid) * n) + " s";
+  }
+  function p7CostSpan(txt) { return ' <span class="p7-cost">' + origEsc(txt) + "</span>"; }
+  function p7TravelText(locId) {
+    const to = LOCATIONS.find((l) => l.id === locId);
+    const from = locById(state.locId);
+    if (!to || !from || to.id === state.locId) return null;
+    const plan = travelPlan(from, to);
+    return plan.dist + " Felder · " + plan.sec + " s · Nahrung −1 · Wasser −1 · Müdigkeit +" + p7FatAdd("travel");
+  }
+  /** Hängt an Aktionslinks im Seiten-HTML die Kosten an. */
+  function p7DecorateCosts(h, page) {
+    const workAid = { holz: "holz", stein: "stein", wasser: "wasser", graben: "graben" };
+    return h.replace(/(<a href="#" ([^>]*)>[^<]*<\/a>)(?!\s*<span class="p7-cost")/g, (m, a, attrs) => {
+      let t = null, g;
+      if ((g = attrs.match(/data-act="([a-z_]+)"/))) t = g[1] === "kampf" ? p7CostText("fight") : workAid[g[1]] ? p7CostText("work", workAid[g[1]]) : null;
+      else if ((g = attrs.match(/data-rep="([a-z_]+):(\d+)"/))) t = ACTIONS[g[1]] ? p7CostText("work", g[1], parseInt(g[2], 10)) : null;
+      else if ((g = attrs.match(/data-x="work\|([a-z_0-9]+)"/))) t = ACTIONS[g[1]] ? p7CostText("work", g[1]) : null;
+      else if ((g = attrs.match(/data-here="([a-z_0-9]+)\|([a-z_0-9]+)"/))) {
+        t = g[2] === "fight" ? p7CostText("fight") : ACTIONS[g[2]] ? p7CostText("work", g[2]) : null;
+        const tr = g[1] !== state.locId ? p7TravelText(g[1]) : null;
+        if (t && tr) t = "erst Reise " + tr + " · dann " + t;
+      } else if (/data-foe="/.test(attrs)) t = p7CostText("fight");
+      else if (/data-page="do-sleep"/.test(attrs)) t = p7CostText("sleep");
+      else if ((g = attrs.match(/data-loc="([a-z_0-9]+)"/)) && page !== "aufgaben") t = p7TravelText(g[1]);
+      else if (/data-craft="/.test(attrs) && page !== "herstellen") t = p7CostText("craft");
+      return t ? a + p7CostSpan(t) : a;
+    });
+  }
+  // Ergebnis-Zeile: tatsächliche Änderung von Müdigkeit/Energie anhängen (exert läuft je nach Aktion vor oder nach showResult).
+  let p7ShowAt = 0, p7Pending = null;
+  const p7ShowResultBase = showResult;
+  showResult = function (line, bad) {
+    let txt = String(line == null ? "" : line);
+    if (p7Pending && Date.now() - p7Pending.at < 40) { txt += p7Pending.text; p7Pending = null; }
+    p7ShowAt = Date.now();
+    return p7ShowResultBase(txt, bad);
+  };
+  const p7ExertBase = exert;
+  exert = function (kind) {
+    if (!state) return p7ExertBase(kind);
+    const f0 = state.fatigue || 0, e0 = curEnergy(state);
+    const r = p7ExertBase(kind);
+    const f1 = state.fatigue || 0, e1 = curEnergy(state);
+    const bits = [];
+    if (f1 !== f0) bits.push("Müdigkeit " + (f1 > f0 ? "+" : "−") + Math.abs(f1 - f0) + " (jetzt " + f1 + " %)");
+    if (e1 !== e0) bits.push("Energie " + (e1 > e0 ? "+" : "−") + Math.abs(e1 - e0) + " (jetzt " + e1 + " %)");
+    if (bits.length && kind !== "sleep") {
+      const text = " \u200b· " + bits.join(", "); // \u200b markiert den angehängten Teil (nie doppelt)
+      if (Date.now() - p7ShowAt < 40 && resultLines.length) {
+        const l = resultLines[resultLines.length - 1]; l.text = String(l.text).replace(/ \u200b·.*$/, "") + text; p7Pending = null; renderResultBanner();
+      } else p7Pending = { text, at: Date.now() };
+    }
+    return r;
+  };
+
+  // ---------- Zähler für die Aufgaben ----------
+  Object.keys(ACTIONS).forEach((aid) => {
+    const def = ACTIONS[aid];
+    if (!def || typeof def.run !== "function" || def.run.p7) return;
+    const base = def.run;
+    def.run = function (s, loc) {
+      const g = aid === "graben" && typeof s.px === "number" ? groundAt(s.px, s.py) : null;
+      const res = base.apply(this, arguments);
+      if (res && res.ok) {
+        const p = p7(s); const where = (loc && loc.id) || s.locId;
+        p.acts[aid] = (p.acts[aid] || 0) + 1;
+        p.acts[aid + "@" + where] = (p.acts[aid + "@" + where] || 0) + 1;
+        if (aid === "graben" && g === "hart") p7Count("digHart");
+      }
+      if (aid === "graben") p7DigHist(s, res, g);
+      return res;
+    };
+    def.run.p7 = true;
+  });
+  function p7DigHist(s, res, g) {
+    const p = p7(s); const pos = p7Pos(s);
+    p.digHist.unshift({ t: Date.now(), x: pos.x, y: pos.y, f: p7FieldName(pos.x, pos.y), g: g || groundAt(pos.x, pos.y),
+      r: (res && res.msg) || "—", ok: !!(res && res.ok),
+      c: res && res.ok ? "Energie −2 · Müdigkeit +" + p7FatAdd("work") + " · Nahrung/Wasser −1 · " + p7WorkSec("graben") + " s" : "keine Kosten (nicht gegraben)" });
+    p.digHist.length = Math.min(p.digHist.length, P7_HIST_MAX);
+  }
+  const p7DoCraftBase = doCraft;
+  doCraft = function (c) {
+    const before = c && c.result ? Object.keys(c.result).map((k) => state.inv[k] || 0) : [];
+    const r = p7DoCraftBase(c);
+    if (c && c.result && Object.keys(c.result).some((k, i) => (state.inv[k] || 0) > before[i])) { const p = p7(); p.crafted[c.id] = (p.crafted[c.id] || 0) + 1; }
+    return r;
+  };
+  const p7ConsumeBase = p6Consume;
+  p6Consume = function (item, n) { const b = state ? (state.inv[item] || 0) : 0; const r = p7ConsumeBase(item, n); if (state && (state.inv[item] || 0) < b) p7Count("eat"); return r; };
+  const p7EndSleepBase = endSleep;
+  endSleep = function (reason, bad) { const was = !!sleepUi; if (was && state) p7Count("sleep"); return p7EndSleepBase(reason, bad); };
+
+  // ---------- Aufgaben: 10 Kapitel × 5 Aufgaben ----------
+  // Zieltypen: inv, craft, house, lager, lagerN, act, kill, quest, cave, visit, tl, gold, cpSpent, attr, job, cnt, stamm, sgeb, rl, cost, rep
+  const GUIDE = [
+    { t: "Erste Schritte im Ruinencamp", tasks: [
+      { id: "k1_holz", l: "Sammle 40 Holz", g: { t: "inv", k: "Holz", n: 40 }, h: "Im Waldstück (70/90) unter Arbeiten „Holz sammeln“. Jeder Gang bringt Holz.", loc: "wald", page: "arbeiten" },
+      { id: "k1_stein", l: "Sammle 30 Stein", g: { t: "inv", k: "Stein", n: 30 }, h: "Im Steinbruch (85/110) unter Arbeiten „Stein abbauen“.", loc: "bruch", page: "arbeiten" },
+      { id: "k1_stock", l: "Stelle einen Stock her", g: { t: "craft", id: "stock" }, h: "Herstellen → Stock (10 Holz). Eine erste Waffe: +8 Kampfpunkte.", page: "herstellen" },
+      { id: "k1_steinstock", l: "Stelle einen Stock mit Stein her", g: { t: "craft", id: "stock_stein" }, h: "Herstellen → Stock mit Stein (10 Holz, 10 Stein). +16 Kampfpunkte.", page: "herstellen" },
+      { id: "k1_huette", l: "Baue eine Holzhütte", g: { t: "house", id: "holzhuette" }, h: "Haus → Holzhütte: 25 Holz, 15 Kunststoff, 20 Metall, 20 Nahrung, 5 Wasser. Metall und Kunststoff gibt es auf dem Schrottfeld (60/120) – es öffnet sich, sobald die ersten vier Aufgaben erledigt sind. Nahrung: Notverpflegung herstellen (3 Holz + 2 Wasser) oder Wilde Hunde jagen. Wasser: Wassersuche in der Oase.", loc: "schrott", page: "haus" },
+    ] },
+    { t: "Versorgung und erster Kampf", tasks: [
+      { id: "k2_wasser", l: "Reise zur Oase und suche Wasser", g: { t: "act", a: "wasser", at: "oase", n: 1 }, h: "Die Oase liegt bei 40/95. Dort „Wasser suchen“.", loc: "oase", page: "wassersuche" },
+      { id: "k2_essen", l: "Iss oder trink etwas aus dem Rucksack", g: { t: "cnt", k: "eat", n: 1 }, h: "Rucksack → Essen und Trinken. Füllt den Bedarf (rechts: Nahrung/Wasser).", page: "rucksack" },
+      { id: "k2_hund", l: "Besiege einen Wilden Hund", g: { t: "kill", e: "wild_dog", n: 1 }, h: "Jagen oder Kämpfen. Wilde Hunde gibt es z. B. im Waldstück. Mit Stock mit Stein kämpfst du besser.", page: "jagen" },
+      { id: "k2_schlaf", l: "Schlafe dich einmal aus", g: { t: "cnt", k: "sleep", n: 1 }, h: "Schlafen senkt Müdigkeit und füllt Energie. Im eigenen Haus schläfst du am sichersten.", page: "schlafen" },
+      { id: "k2_hundejagd", l: "Löse die Quest „Hundejagd“ ein", g: { t: "quest", q: "hundejagd" }, h: "Besiege 2 Wilde Hunde und löse die Quest auf der Aufgaben-Seite unter „Nebenquests“ ein.", page: "aufgaben" },
+    ] },
+    { t: "Graben und Erkunden", tasks: [
+      { id: "k3_graben", l: "Grabe 3×", g: { t: "act", a: "graben", n: 3 }, h: "Graben geht überall außer im Ruinencamp. Wahrnehmung erhöht die Fundchance.", page: "graben" },
+      { id: "k3_erkunden", l: "Erkunde 5×", g: { t: "cnt", k: "erk", n: 5 }, h: "Erkunden findet Kleinigkeiten, Spuren und neue Orte in der Nähe.", page: "erkunden" },
+      { id: "k3_cp", l: "Verteile 3 Charakterpunkte", g: { t: "cpSpent", n: 3 }, h: "Status → bei einer Eigenschaft „Go!“. Was jede Eigenschaft bewirkt, steht dort.", page: "status" },
+      { id: "k3_metall", l: "Reise zum Schrottfeld und sammle 3× Metall", g: { t: "act", a: "metall", at: "schrott", n: 3 }, h: "Schrottfeld (60/120), Arbeiten → „Arbeiten hier“ → Metall sammeln.", loc: "schrott", page: "arbeiten" },
+      { id: "k3_tl1", l: "Erreiche Techlevel 1 (100 EP)", g: { t: "tl", n: 1 }, h: "EP gibt es für Arbeit, Kämpfe, Quests und Aufgaben. Ab 100 EP öffnen sich Höhlen, Sandwüste, Öl- und Gasfeld.", page: "status" },
+    ] },
+    { t: "Die Anfängerhöhlen", tasks: [
+      { id: "k4_west", l: "Reise zur Anfängerhöhle West und erkunde sie", g: { t: "cave", key: "West" }, h: "Anfängerhöhle West (25/118): „Höhle erkunden“ gibt einmalig +75 EP und +75 CP (Wiki).", loc: "cave_w" },
+      { id: "k4_erstehoehle", l: "Löse die Quest „Erste Höhle“ ein", g: { t: "quest", q: "erste_hoehle" }, h: "Nach dem ersten Höhlenbesuch unten bei den Nebenquests einlösen.", page: "aufgaben" },
+      { id: "k4_holzlief", l: "Liefere 20 Holz im Ruinencamp", g: { t: "quest", q: "holz_lieferung" }, h: "Mit 20 Holz ins Ruinencamp (50/100) und die Quest „Holzlieferung“ bei den Nebenquests einlösen.", loc: "camp", page: "aufgaben" },
+      { id: "k4_sand", l: "Reise in die Sandwüste und sammle 20 Sand", g: { t: "inv", k: "Sand", n: 20 }, h: "Sandwüste (55/130). Sand findest du beim Graben; Sandsucher bauen ihn direkt ab.", loc: "sandwueste", page: "graben" },
+      { id: "k4_zweite", l: "Erkunde eine zweite Anfängerhöhle", g: { t: "cave", n: 2 }, h: "Nord (101/10), Ost (192/103) oder Süd (99/191). Weite Wege – Nahrung und Wasser mitnehmen.", loc: "cave_s" },
+    ] },
+    { t: "Ein Beruf: Waffentechniker", tasks: [
+      { id: "k5_job", l: "Lerne den Beruf Waffentechniker", g: { t: "job", list: ["Waffentechniker"] }, h: "Fähigkeiten → TL 1 → Waffentechniker „erlernen“. Er stellt Messer und Speere her.", page: "faehigkeiten" },
+      { id: "k5_messer", l: "Stelle ein Messer her", g: { t: "craft", id: "messer" }, h: "Herstellen → Messer: 10 Holz, 10 Stein, 20 Metall. +32 Kampfpunkte.", page: "herstellen" },
+      { id: "k5_siege", l: "Gewinne insgesamt 6 Kämpfe", g: { t: "kill", n: 6 }, h: "Wilde Hunde, Plünderer vor den Höhlen. Kämpfen kostet Energie – vorher ausschlafen.", page: "kaempfen" },
+      { id: "k5_gold", l: "Spare 100 Gold", g: { t: "gold", n: 100 }, h: "Gold gibt es für Quests, Aufgaben und Kämpfe; Händler kaufen Rohstoffe an. Du brauchst es für den Stamm.", page: "handeln" },
+      { id: "k5_steinspeer", l: "Stelle einen Steinspeer her", g: { t: "craft", id: "steinspeer" }, h: "Herstellen → Steinspeer: 100 Holz, 25 Stein, 1 Wasser, 1 Nahrung.", page: "herstellen" },
+    ] },
+    { t: "Vorräte und ein Steinhaus", tasks: [
+      { id: "k6_lager", l: "Baue das Privatlager", g: { t: "lager" }, h: "Haus → Privatlager bauen (50 Holz, 50 Stein). Nur im Ruinencamp.", loc: "camp", page: "haus" },
+      { id: "k6_einlagern", l: "Lagere 50 Holz im Privatlager ein", g: { t: "lagerN", k: "Holz", n: 50 }, h: "Haus → Lager → Holz einlagern. Was im Lager liegt, zählt im Ruinencamp beim Bauen mit.", loc: "camp", page: "haus" },
+      { id: "k6_notverpf", l: "Stelle eine Notverpflegung her", g: { t: "craft", id: "notverpflegung" }, h: "Herstellen → Notverpflegung (3 Holz, 2 Wasser) gibt 1 Nahrung.", page: "herstellen" },
+      { id: "k6_tl2", l: "Erreiche Techlevel 2 (250 EP)", g: { t: "tl", n: 2 }, h: "Ab TL2: Erzader, Glasschmelze, Kräuterfeld und die Spitzhacke.", page: "status" },
+      { id: "k6_steinhaus", l: "Baue ein kleines Steinhaus", g: { t: "house", id: "steinhaus_k" }, h: "Haus → kleines Steinhaus: 120 Holz, 25 Kunststoff, 100 Stein, 45 Metall, 40 Nahrung, 5 Wasser. Lager 10.000 je Rohstoff.", loc: "camp", page: "haus" },
+    ] },
+    { t: "Werkzeug und Bodenschätze", tasks: [
+      { id: "k7_hacke", l: "Stelle eine Spitzhacke her", g: { t: "craft", id: "spitzhacke" }, h: "Herstellen → Spitzhacke (10 Holz, 15 Metall, TL2). Damit gräbst du auf hartem Boden.", page: "herstellen" },
+      { id: "k7_hart", l: "Grabe auf hartem Boden", g: { t: "cnt", k: "digHart", n: 1 }, h: "Felsboden-Felder (Graben zeigt den Boden an) brauchen die Spitzhacke. Mit N/O/S/W ein passendes Feld suchen.", page: "graben" },
+      { id: "k7_erz", l: "Reise zur Erzader", g: { t: "visit", loc: "erzfeld" }, h: "Erzader (95/125). Erzsammler bauen dort Erz ab.", loc: "erzfeld" },
+      { id: "k7_glas", l: "Reise zur Glasschmelze", g: { t: "visit", loc: "glasschmelze" }, h: "Glasschmelze (75/75). Glasschmelzer machen aus Sand Glas.", loc: "glasschmelze" },
+      { id: "k7_tl3", l: "Erreiche Techlevel 3 (400 EP)", g: { t: "tl", n: 3 }, h: "Ab TL3: Werkzeugmacher (Schaufel), Ringhöhle, Edelmetall-Schacht.", page: "status" },
+    ] },
+    { t: "Einen Stamm gründen", tasks: [
+      { id: "k8_kosten", l: "Lege die Gründungskosten bereit", g: { t: "cost", cost: STAMM_FOUND_COST }, h: "50 Holz, 30 Stein, 20 Metall, 100 Gold (dazu ein eigenes Haus und 25 EP).", page: "rucksack" },
+      { id: "k8_kraft", l: "Steigere Kraft auf 3", g: { t: "attr", k: "Kraft", n: 3 }, h: "Status → Kraft „Go!“. Das Forschungsgrundstück braucht Kraft 3.", page: "status" },
+      { id: "k8_int", l: "Steigere Intelligenz auf 2", g: { t: "attr", k: "Intelligenz", n: 2 }, h: "Status → Intelligenz „Go!“. Das Forschungsgebäude braucht Intelligenz 2.", page: "status" },
+      { id: "k8_gruenden", l: "Gründe einen Stamm", g: { t: "stamm" }, h: "Rechts unter Stamm → Gründung. Name eingeben, „gründen“.", page: "gruendung" },
+      { id: "k8_grund", l: "Baue das Forschungsgrundstück", g: { t: "sgeb", id: "forschungsgrund" }, h: "Bauoptionen → Stammgebäude → Forschungsgrundstück (50 Stein, 10 Sand). Bauzeit 3 Minuten. Researchlevel 1.", page: "stammgeb" },
+    ] },
+    { t: "Forschung im Stamm", tasks: [
+      { id: "k9_geb", l: "Baue das Forschungsgebäude", g: { t: "sgeb", id: "forschungsgeb" }, h: "Stammgebäude → Forschungsgebäude (50 Holz, 20 Kunststoff, 30 Stein, 2 Sand). Researchlevel 2.", page: "stammgeb" },
+      { id: "k9_tl4", l: "Erreiche Techlevel 4 (550 EP)", g: { t: "tl", n: 4 }, h: "Ab TL4: Forscher, Uransammler, Tierfänger.", page: "status" },
+      { id: "k9_forscher", l: "Lerne den Beruf Forscher", g: { t: "job", list: ["Forscher"] }, h: "Fähigkeiten → TL 4 → Forscher. Nur Forscher arbeiten im Forschungsgebäude (Wiki).", page: "faehigkeiten" },
+      { id: "k9_forschen", l: "Forsche 3× im Forschungsgebäude", g: { t: "act", a: "forschung_stamm", n: 3 }, h: "Stamm → Forschung → „forschen“. Jeder Gang: 3 + Intelligenz Researchpunkte.", page: "forschung" },
+      { id: "k9_rl3", l: "Bringe den Stamm auf Researchlevel 3", g: { t: "rl", n: 3 }, h: "Weiter forschen. Researchlevel 3 öffnet Kunststoffschmelze und Erzverarbeitung.", page: "forschung" },
+    ] },
+    { t: "Veteran der Endzeit", tasks: [
+      { id: "k10_rep", l: "Sammle 10 Reiseerfahrung", g: { t: "rep", n: 10 }, h: "Je 10 gereiste Felder gibt es 1 Reiseerfahrung (Wiki). Landkarte oder N/O/S/W.", page: "landkarte" },
+      { id: "k10_siege", l: "Gewinne insgesamt 20 Kämpfe", g: { t: "kill", n: 20 }, h: "Rivalenlager, Höhlen, Tiergebiet.", page: "kaempfen" },
+      { id: "k10_schmelze", l: "Baue die Kunststoffschmelze", g: { t: "sgeb", id: "kunststoffschmelze" }, h: "Stammgebäude → Kunststoffschmelze (30 Holz, 40 Stein, 80 Metall, 1 Sand; Researchlevel 3, Intelligenz 3).", page: "stammgeb" },
+      { id: "k10_tl5", l: "Erreiche Techlevel 5 (700 EP)", g: { t: "tl", n: 5 }, h: "Ab TL5: Pilzsammler, Gärtner, Mechaniker.", page: "status" },
+      { id: "k10_grosshaus", l: "Baue ein großes Steinhaus", g: { t: "house", id: "steinhaus_g" }, h: "Haus → großes Steinhaus: 500 Holz, 100 Kunststoff, 200 Stein, 80 Metall, 100 Nahrung, 20 Wasser.", loc: "camp", page: "haus" },
+    ] },
+  ];
+  // Belohnungen (DESIGN): je Aufgabe EP und Gold, je Kapitel zusätzlich CP.
+  function p7TaskReward(ci) { return { ep: 2 + ci, gold: 3 * (ci + 1) }; }
+  function p7ChapterReward(ci) { return { ep: 10 + 5 * (ci + 1), cp: 5, gold: 20 * (ci + 1) }; }
+  function p7AttrSum(s) { return ATTRS.reduce((n, a) => n + (s.attrs[a] || 0), 0); }
+  function p7HouseRank(s) { const d = houseDef(s); return d ? HOUSES.indexOf(d) : -1; }
+  /** [aktuell, Ziel] eines Aufgabenziels */
+  function p7Progress(s, g) {
+    const p = p7(s); const gd = s.guide || {};
+    switch (g.t) {
+      case "inv": return [Math.max(0, s.inv[g.k] || 0), g.n];
+      case "craft": { const c = CRAFTS.find((x) => x.id === g.id); const made = p.crafted[g.id] || 0; const owns = g.id !== "notverpflegung" && c && Object.keys(c.result).some((k) => (s.inv[k] || 0) > 0); return [made > 0 || owns ? 1 : 0, 1]; }
+      case "house": return [p7HouseRank(s) >= HOUSES.findIndex((h) => h.id === g.id) ? 1 : 0, 1];
+      case "lager": return [s.house && s.house.lagerBuilt ? 1 : 0, 1];
+      case "lagerN": return [Math.min(g.n, (s.house && s.house.lager && s.house.lager[g.k]) || 0), g.n];
+      case "act": return [p.acts[g.a + (g.at ? "@" + g.at : "")] || 0, g.n];
+      case "kill": return [g.e ? (s.kills[g.e] || 0) : Object.keys(s.kills || {}).reduce((n, k) => n + (s.kills[k] || 0), 0), g.n];
+      case "quest": return [s.quests[g.q] && s.quests[g.q].claimed ? 1 : 0, 1];
+      case "cave": return g.key ? [s.cavesVisited && s.cavesVisited[g.key] ? 1 : 0, 1] : [Object.keys(s.cavesVisited || {}).length, g.n];
+      case "visit": return [p.visited[g.loc] || s.locId === g.loc ? 1 : 0, 1];
+      case "tl": return [Math.min(g.n, s.techlevel || 0), g.n];
+      case "gold": return [s.gold, g.n];
+      case "cpSpent": return [Math.max(0, p7AttrSum(s) - (gd.attrBase || 0)), g.n];
+      case "attr": return [s.attrs[g.k] || 0, g.n];
+      case "job": return [g.list.includes(s.job) ? 1 : 0, 1];
+      case "cnt": return [p.cnt[g.k] || 0, g.n];
+      case "stamm": return [s.stamm ? 1 : 0, 1];
+      case "sgeb": return [stammHas(s, g.id) ? 1 : 0, 1];
+      case "rl": { const st = stammOf(s); return [st ? Math.min(g.n, st.rl || 0) : 0, g.n]; }
+      case "cost": { const ks = Object.keys(g.cost); return [ks.filter((k) => (k === "gold" ? s.gold : s.inv[k] || 0) >= g.cost[k]).length, ks.length]; }
+      case "rep": return [s.rep || 0, g.n];
+    }
+    return [0, 1];
+  }
+  function p7Met(s, g) { const pr = p7Progress(s, g); return pr[0] >= pr[1]; }
+  function p7ProgText(s, task) {
+    const g = task.g; const pr = p7Progress(s, g);
+    if (pr[1] <= 1) return pr[0] >= 1 ? "erledigt" : "offen";
+    const unit = g.t === "inv" || g.t === "lagerN" ? " " + g.k : g.t === "gold" ? " Gold" : g.t === "kill" ? " Siege" : g.t === "cost" ? " Posten" : g.t === "rep" ? " REP" : g.t === "tl" ? " TL" : g.t === "rl" ? " RL" : "";
+    return Math.min(pr[0], pr[1]) + "/" + pr[1] + unit;
+  }
+  function p7GuideInit(s) {
+    if (s.guide && typeof s.guide.ch === "number") return false;
+    const fresh = (s.ep || 0) === 0 && !s.house && !Object.keys(s.inv || {}).some((k) => k !== "Nahrung" && k !== "Wasser" && s.inv[k] > 0);
+    s.guide = { ch: 0, done: {}, chDone: {}, attrBase: p7AttrSum(s), migrated: !fresh };
+    if (!fresh) {
+      // Bestehender Spielstand: bereits Erfülltes still abhaken (ohne Belohnung), damit niemand doppelt belohnt wird.
+      for (let ci = 0; ci < GUIDE.length; ci++) {
+        let all = true;
+        GUIDE[ci].tasks.forEach((t) => { if (p7Met(s, t.g)) s.guide.done[t.id] = 1; else all = false; });
+        if (all) { s.guide.chDone[ci] = 1; s.guide.ch = ci + 1; } else break;
+      }
+    }
+    // Die alte Einführung ist jetzt Teil des Leitfadens.
+    if (s.quests && s.quests.einfuehrung && s.flags && s.flags.tutorial_done) { s.quests.einfuehrung.status = "done"; s.quests.einfuehrung.claimed = true; }
+    return true;
+  }
+  function p7UnlockSchrott(s) {
+    if (s.flags.tutorial_done) return;
+    s.flags.tutorial_done = true; setChain(s, "tutorial", 5);
+    if (s.quests && s.quests.einfuehrung) { s.quests.einfuehrung.status = "done"; s.quests.einfuehrung.claimed = true; }
+    p6Log("Das Schrottfeld (60/120) ist jetzt erreichbar: dort gibt es Metall und Kunststoff.", "good");
+  }
+  /** Prüft die Aufgaben, hakt ab, vergibt Belohnungen. true = etwas hat sich geändert. */
+  function p7GuideTick() {
+    const s = state;
+    if (!s || s.dead || !s.attrs) return false;
+    p7(s);
+    let changed = p7GuideInit(s);
+    const g = s.guide;
+    let guard = 0;
+    while (g.ch < GUIDE.length && guard++ <= GUIDE.length) {
+      const ci = g.ch; const ch = GUIDE[ci];
+      const firstFour = ch.tasks.slice(0, 4);
+      firstFour.forEach((t) => {
+        if (!g.done[t.id] && p7Met(s, t.g)) {
+          g.done[t.id] = 1; changed = true;
+          const r = p7TaskReward(ci); s.ep += r.ep; s.gold += r.gold;
+          const msg = "Aufgabe erledigt: " + t.l + ". +" + r.ep + " EP, +" + r.gold + " Gold.";
+          p6Log(msg, "good"); g.last = { text: msg, at: Date.now() }; // am Ergebnis vorbei: steht im Aufgaben-Kasten
+        }
+      });
+      const ready = firstFour.every((t) => g.done[t.id]);
+      if (ci === 0 && ready) p7UnlockSchrott(s);
+      const fin = ch.tasks[4];
+      if (ready && !g.done[fin.id] && p7Met(s, fin.g)) {
+        g.done[fin.id] = 1; g.chDone[ci] = 1; g.ch = ci + 1; changed = true;
+        const r = p7TaskReward(ci); const cr = p7ChapterReward(ci);
+        s.ep += r.ep + cr.ep; s.gold += r.gold + cr.gold; s.cp += cr.cp;
+        const msg = "Kapitel " + (ci + 1) + " abgeschlossen: „" + ch.t + "“. +" + (r.ep + cr.ep) + " EP, +" + (r.gold + cr.gold) + " Gold, +" + cr.cp + " CP.";
+        p6Log(msg, "good"); g.last = { text: msg, at: Date.now() }; // am Ergebnis vorbei: steht im Aufgaben-Kasten
+        continue;
+      }
+      break;
+    }
+    if (changed) save({ quiet: true });
+    return changed;
+  }
+  const P7_PAGE_NAMES = { arbeiten: "Arbeiten", herstellen: "Herstellen", haus: "Haus", wassersuche: "Wassersuche", rucksack: "Rucksack", jagen: "Jagen", schlafen: "Schlafen",
+    graben: "Graben", erkunden: "Erkunden", status: "Status", faehigkeiten: "Fähigkeiten", kaempfen: "Kämpfen", handeln: "Handeln", gruendung: "Stamm gründen",
+    stammgeb: "Stammgebäude", forschung: "Forschung", landkarte: "Landkarte" };
+  function p7TaskLinks(t) {
+    const bits = [];
+    if (t.loc && state.locId !== t.loc) { const l = LOCATIONS.find((x) => x.id === t.loc); if (l) bits.push(origLink("hin: " + l.name + " (" + l.x + "/" + l.y + ")", 'data-loc="' + t.loc + '"')); }
+    if (t.page && t.page !== "aufgaben") bits.push(origLink(P7_PAGE_NAMES[t.page] || t.page, 'data-page="' + t.page + '"'));
+    return bits.length ? '<span class="p7-links">' + bits.join(" · ") + "</span>" : "";
+  }
+  function p7Current(s) {
+    const g = s.guide; if (!g || g.ch >= GUIDE.length) return null;
+    const ch = GUIDE[g.ch];
+    const open = ch.tasks.slice(0, 4).filter((t) => !g.done[t.id]);
+    return { ci: g.ch, ch, task: open[0] || ch.tasks[4], open };
+  }
+  function p7GuideBoxHtml() {
+    const s = state; const cur = p7Current(s);
+    let h = '<div class="mbox p7-guide"><h3>Aufgaben</h3>';
+    if (!cur) return h + '<p class="p7-small">Alle ' + GUIDE.length + " Kapitel geschafft.</p>" + '<a class="p7-all" href="#" data-page="aufgaben">Übersicht</a></div>';
+    const g = s.guide; const ready = cur.ch.tasks.slice(0, 4).every((t) => g.done[t.id]);
+    h += '<p class="p7-chap">Kapitel ' + (cur.ci + 1) + "/" + GUIDE.length + ": " + origEsc(cur.ch.t) + "</p><ul>";
+    cur.ch.tasks.forEach((t, i) => {
+      const done = !!g.done[t.id]; const cls = done ? "done" : (i === 4 && !ready) ? "locked" : t === cur.task ? "now" : "";
+      h += '<li class="p7-task ' + cls + '"><span class="p7-mark">' + (done ? "✔" : i === 4 ? "★" : "•") + "</span> " + origEsc(t.l) +
+        (done ? "" : ' <span class="p7-prog">' + origEsc(p7ProgText(s, t)) + "</span>") + "</li>";
+    });
+    h += "</ul>";
+    if (g.last && Date.now() - g.last.at < 15000) h += '<p class="p7-new">' + origEsc(g.last.text) + "</p>";
+    h += '<p class="p7-hint">' + origEsc(cur.task.h) + "</p>" + p7TaskLinks(cur.task) + '<a class="p7-all" href="#" data-page="aufgaben">Alle Aufgaben</a></div>';
+    return h;
+  }
+  function p7GuideMiniHtml() {
+    const s = state; const cur = p7Current(s);
+    if (!cur) return "";
+    const g = s.guide;
+    const nDone = cur.ch.tasks.filter((t) => g.done[t.id]).length;
+    return '<div class="p7-mini m-only"><a href="#" data-page="aufgaben"><b>Aufgabe:</b> ' + origEsc(cur.task.l) + ' <span class="p7-prog">' + origEsc(p7ProgText(s, cur.task)) + "</span>" +
+      ' <span class="p7-small">Kapitel ' + (cur.ci + 1) + " · " + nDone + "/5 ›</span></a>" +
+      (g.last && Date.now() - g.last.at < 15000 ? '<p class="p7-new">' + origEsc(g.last.text) + "</p>" : "") + "</div>";
+  }
+  function p7AufgabenPage() {
+    const s = state; p7GuideTick();
+    const g = s.guide; const cur = p7Current(s);
+    let h = "<h2>Aufgaben</h2><p>Der Leitfaden führt in " + GUIDE.length + " Kapiteln durch das Spiel. Die ersten vier Aufgaben eines Kapitels gehen in beliebiger Reihenfolge, die fünfte (★) schließt das Kapitel ab. " +
+      "Belohnung je Aufgabe: EP und Gold, je Kapitel zusätzlich 5 CP (DESIGN). Der Fortschritt wird automatisch erkannt.</p>";
+    if (g.migrated) h += '<p class="muted">Bestehender Spielstand: bereits Erfülltes wurde ohne Belohnung abgehakt.</p>';
+    GUIDE.forEach((ch, ci) => {
+      const isCur = cur && cur.ci === ci; const done = !!g.chDone[ci]; const future = !done && !isCur;
+      const ready = ch.tasks.slice(0, 4).every((t) => g.done[t.id]);
+      const r = p7ChapterReward(ci);
+      h += '<details class="p7-ch' + (isCur ? " now" : done ? " done" : " future") + '"' + (isCur ? " open" : "") + "><summary>" + (done ? "✔ " : isCur ? "▶ " : "") +
+        "Kapitel " + (ci + 1) + ": " + origEsc(ch.t) + ' <span class="p7-small">' + ch.tasks.filter((t) => g.done[t.id]).length + "/5</span></summary><ol>";
+      ch.tasks.forEach((t, i) => {
+        const td = !!g.done[t.id]; const tr = p7TaskReward(ci);
+        h += '<li class="' + (td ? "done" : (i === 4 && !ready) || future ? "locked" : "") + '"><b>' + (td ? "✔ " : "") + origEsc(t.l) + "</b>" +
+          (td ? "" : ' <span class="p7-prog">' + origEsc(p7ProgText(s, t)) + "</span>") +
+          '<br><span class="muted">' + origEsc(t.h) + "</span>" + (!td && !future ? "<br>" + p7TaskLinks(t) : "") +
+          ' <span class="p7-small">Belohnung: +' + tr.ep + " EP, +" + tr.gold + " Gold</span></li>";
+      });
+      h += '</ol><p class="p7-small">Kapitelbelohnung: +' + r.ep + " EP, +" + r.gold + " Gold, +" + r.cp + " CP</p></details>";
+    });
+    // Nebenquests: im Original-Layout gab es keinen Einlöse-Knopf → hier.
+    h += "<h3>Nebenquests</h3>";
+    QUESTS.filter((q) => !q.chain && !q.chainId && q.id !== "einfuehrung").forEach((q) => {
+      const st = s.quests[q.id] || {};
+      const ok = q.check(s);
+      let prog = "offen";
+      try { if (q.progress) prog = String(q.progress(s)); } catch (e) { prog = "offen"; }
+      const act = st.claimed ? "eingelöst ✔" : ok ? origLink("einlösen", 'data-quest="' + q.id + '"') : '<span class="muted">' + origEsc(prog) + "</span>";
+      h += "<p><b>" + origEsc(q.title) + "</b> — " + origEsc(q.desc || "") + " " + act + "</p>";
+    });
+    return h;
+  }
+
+  // ---------- Erkunden ----------
+  function p7ErkChances(s) {
+    const dyn = s.attrs.Dynamik || 1, wahr = s.attrs.Wahrnehmung || 1;
+    let disc = 0.18 + 0.01 * (dyn - 1) + 0.005 * (wahr - 1); // DESIGN: früh ~18 %; WIKI: Dynamik beeinflusst die Erkunden-Chance
+    const horse = activePet(s);
+    if (horse && horse.type === "Pferd") disc *= 1.25; // WIKI: Pferd "optimal um Länder zu erkunden"; Faktor DESIGN
+    disc = Math.min(0.45, disc);
+    const find = Math.min(0.6, 0.4 + 0.01 * (wahr - 1) + 0.005 * (dyn - 1)); // DESIGN: kleine Funde
+    return { disc, find, trace: 0.35 };
+  }
+  function p7DiscCandidates(s) {
+    const pos = p7Pos(s); const p = p7(s);
+    return LOCATIONS.filter((l) => l.id !== "camp" && !p.found[l.id] && !p.visited[l.id] && placeOpen(l))
+      .map((l) => ({ l, d: Math.abs(l.x - pos.x) + Math.abs(l.y - pos.y) })).filter((o) => o.d > 0 && o.d <= 40)
+      .sort((a, b) => a.d - b.d);
+  }
+  function p7FindPool(s) {
+    const pos = p7Pos(s); const pl = placeAt(pos.x, pos.y) || (s.locId !== "field" ? LOCATIONS.find((l) => l.id === s.locId) : null);
+    const acts = (pl && pl.actions) || [];
+    if (acts.includes("holz")) return [["Holz", 1, 3, 5], ["Knochen", 1, 1, 1], ["Stein", 1, 1, 1]];
+    if (acts.includes("stein")) return [["Stein", 1, 3, 5], ["Sand", 1, 2, 2], ["Kronkorken", 1, 1, 1]];
+    if (acts.includes("metall") || acts.includes("kunststoff")) return [["Metall", 1, 2, 3], ["Kunststoff", 1, 2, 3], ["Kronkorken", 1, 3, 2]];
+    if (acts.includes("wasser")) return [["Wasser", 1, 2, 4], ["Holz", 1, 2, 1], ["Nahrung", 1, 1, 1]];
+    if (acts.includes("sand")) return [["Sand", 2, 4, 5], ["Knochen", 1, 1, 1], ["Kronkorken", 1, 2, 1]];
+    const g = groundAt(pos.x, pos.y);
+    if (g === "hart") return [["Stein", 1, 2, 4], ["Metall", 1, 1, 1], ["Kronkorken", 1, 2, 1]];
+    if (g === "glas") return [["Sand", 1, 3, 3], ["Kristall", 1, 1, 1]];
+    return [["Holz", 1, 2, 3], ["Stein", 1, 1, 2], ["Kronkorken", 1, 2, 2], ["Knochen", 1, 1, 1], ["Sand", 1, 2, 1], ["Nahrung", 1, 1, 1]];
+  }
+  function p7Erkunden() {
+    if (!state || state.dead) return;
+    if (sleepUi) { showResult(SLEEP_MSG, true); renderAll(); return; }
+    if (busy) { showResult("Erst die laufende Aktion beenden.", true); renderAll(); return; }
+    origPage = "erkunden";
+    if (blockIfExhausted()) return;
+    busy = true; workUi = { aid: "erkunden", n: 1, i: 0, pct: 0 };
+    clearResults(); setStatus("Erkunden…"); renderAll();
+    runProgress(P7_ERK_MS, () => { workUi = null; busy = false; setProgress(0); setStatus("Bereit."); p7ErkundenFinish(); });
+  }
+  function p7ErkundenFinish() {
+    const s = state; if (!s || s.dead) return;
+    const p = p7(s); const pos = p7Pos(s);
+    const f0 = s.fatigue || 0, e0 = curEnergy(s);
+    const before = invSnapshot(s);
+    const ch = p7ErkChances(s);
+    let msg, kind = "nichts";
+    const cands = p7DiscCandidates(s);
+    if (cands.length && Math.random() < ch.disc) {
+      const pick = cands[rand(0, Math.min(2, cands.length - 1))].l;
+      p.found[pick.id] = 1; s.ep += 3; kind = "entdeckt";
+      msg = "Entdeckung! Spuren führen zu " + pick.name + ": " + (Math.abs(pick.x - pos.x) + Math.abs(pick.y - pos.y)) + " Felder " + p7Dir(pick.x - pos.x, pick.y - pos.y) + " (" + pick.x + "/" + pick.y + "). +3 EP.";
+    } else if (Math.random() < ch.find) {
+      const it = weighted(p7FindPool(s).map((r) => ({ item: r[0], n: rand(r[1], r[2]), w: r[3] })));
+      addInv(s, it.item, it.n); kind = "fund";
+      msg = "Fund: " + it.n + "× " + it.item + ".";
+    } else if (Math.random() < ch.trace) {
+      const near = LOCATIONS.filter((l) => l.id !== s.locId).map((l) => ({ l, d: Math.abs(l.x - pos.x) + Math.abs(l.y - pos.y) })).sort((a, b) => a.d - b.d)[rand(0, 2)];
+      const cave = LOCATIONS.filter((l) => (l.tags || []).includes("Höhle") && l.id !== s.locId).map((l) => ({ l, d: Math.abs(l.x - pos.x) + Math.abs(l.y - pos.y) })).sort((a, b) => a.d - b.d)[0];
+      const t = rand(0, 2);
+      kind = "spur";
+      if (t === 0 && cave) msg = "Spur: Alte Fußspuren führen " + p7Dir(cave.l.x - pos.x, cave.l.y - pos.y) + " Richtung " + cave.l.name + " (" + cave.l.x + "/" + cave.l.y + ").";
+      else if (t === 1) msg = "Spur: Hundespuren im Sand. Wilde Hunde jagen hier in der Gegend (Jagen/Kämpfen).";
+      else msg = "Spur: Ein verrostetes Schild zeigt " + p7Dir(near.l.x - pos.x, near.l.y - pos.y) + " nach " + near.l.name + " (" + near.d + " Felder).";
+    } else msg = "Nichts gefunden.";
+    p7ShowAt = 0; // eigene Kostenzeile unten
+    exert("work"); p7Pending = null;
+    msg += afterWork(before);
+    const df = (s.fatigue || 0) - f0, de = curEnergy(s) - e0;
+    const cost = "Energie " + (de >= 0 ? "+" : "−") + Math.abs(de) + " · Müdigkeit +" + df;
+    p.erkHist.unshift({ t: Date.now(), x: pos.x, y: pos.y, f: p7FieldName(pos.x, pos.y), k: kind, r: msg, c: cost });
+    p.erkHist.length = Math.min(p.erkHist.length, P7_HIST_MAX);
+    p7Count("erk");
+    log(msg, kind === "nichts" ? "bad" : "good");
+    origPage = "erkunden";
+    showResult(msg + " · Müdigkeit +" + df + " (jetzt " + (s.fatigue || 0) + " %), Energie " + (de >= 0 ? "+" : "−") + Math.abs(de) + " (jetzt " + curEnergy(s) + " %)", kind === "nichts");
+    maybeUnlockTL(); save({ quiet: true }); renderAll();
+  }
+  function p7Move(dx, dy, back) {
+    const s = state;
+    if (!s || s.dead) return;
+    if (sleepUi) { showResult(SLEEP_MSG, true); renderAll(); return; }
+    if (busy) { showResult("Erst die laufende Aktion beenden.", true); renderAll(); return; }
+    const pos = p7Pos(s); const tx = pos.x + dx, ty = pos.y + dy;
+    const pl = placeAt(tx, ty);
+    if (pl && !placeOpen(pl)) { origPage = back; showResult(pl.name + ": " + placeGate(pl).text + ".", true); renderAll(); return; }
+    clickField(tx, ty);
+    origPage = back;
+    if (resultLines.length) resultPage = back;
+    renderAll();
+  }
+  function p7NavHtml(back) {
+    const b = (lbl, dx, dy, t) => '<a href="#" class="p7-nav-b" data-x="p7move|' + dx + "|" + dy + "|" + back + '" title="' + t + '" aria-label="' + t + '">' + lbl + "</a>";
+    return '<div class="p7-nav"><span></span>' + b("N", 0, -1, "ein Feld nach Norden") + "<span></span>" + b("W", -1, 0, "ein Feld nach Westen") +
+      '<a href="#" class="p7-nav-map" data-page="landkarte" title="Landkarte">Karte</a>' + b("O", 1, 0, "ein Feld nach Osten") + "<span></span>" + b("S", 0, 1, "ein Feld nach Süden") + "<span></span></div>";
+  }
+  function p7HereHtml(withGround) {
+    const pos = p7Pos(state); const g = groundAt(pos.x, pos.y);
+    return '<div class="p7-here"><div class="p7-here-t"><p><b>Standort:</b> ' + origEsc(p7FieldName(pos.x, pos.y)) + " " + pos.x + "/" + pos.y + "</p>" +
+      (withGround ? "<p><b>Boden:</b> " + origEsc(p7GroundText(g)) + "</p>" : "") +
+      '<p class="p7-small">N/O/S/W: ' + origEsc(p7CostText("move")) + "</p><p>" + origLink("Landkarte öffnen", 'data-page="landkarte"') + "</p></div>" + p7NavHtml(origPage) + "</div>";
+  }
+  function p7HistTable(list) {
+    if (!list.length) return '<p class="muted">Noch keine Einträge.</p>';
+    return '<table class="p7-hist"><tr><th>Zeit</th><th>Feld</th><th>Ergebnis</th><th>Kosten</th></tr>' + list.map((e) =>
+      "<tr><td>" + p7Time(e.t) + "</td><td>" + origEsc(e.f + " " + e.x + "/" + e.y) + "</td><td>" + origEsc(e.r) + "</td><td>" + origEsc(e.c) + "</td></tr>").join("") + "</table>";
+  }
+  function p7ErkundenPage() {
+    const s = state; const p = p7(s); const ch = p7ErkChances(s);
+    const active = workUi && workUi.aid === "erkunden";
+    const cands = p7DiscCandidates(s).length;
+    let h = "<h2>Erkunden</h2>" + origLive() +
+      '<div class="p7-pic"><a href="#" data-page="landkarte"><img src="assets/map/karte-welt.jpg" alt="Landkarte" class="p7-art"></a></div>' + p7HereHtml(false);
+    h += active ? '<div class="work-row"><p>Erkunden…</p><div class="work-bar"><i style="width:' + Math.round(workUi.pct || 0) + '%"></i></div></div>'
+      : '<p class="p7-btnrow"><a href="#" class="p7-btn" data-x="p7erk">Erkunden</a> <span class="p7-cost">' + origEsc(p7CostText("erkunden")) + "</span></p>";
+    h += "<p>Chancen je Versuch: <b>Entdeckung " + Math.round(ch.disc * 100) + " %</b>" + (cands ? " (" + cands + " unentdeckte Orte in 40 Feldern)" : " (in der Nähe ist alles entdeckt)") +
+      " · <b>kleiner Fund " + Math.round(ch.find * 100) + " %</b> · sonst Spuren oder nichts.</p>";
+    h += '<p class="muted">Erkunden durchsucht dein Feld: Du entdeckst nahe Orte (einmalig +3 EP, mit Richtung und Koordinaten), findest Kleinigkeiten passend zum Gelände (Wald: Holz, Steinbruch: Stein, Schrottfeld: Metall/Kunststoff, Oase: Wasser, Felsboden: Stein) ' +
+      "oder Spuren zu Höhlen und Orten. Dynamik erhöht die Entdeckungschance (Wiki: „beeinflusst die Erfolgschance beim Erkunden“), Wahrnehmung die Fundchance, ein Pferd ×1,25 (DESIGN). Entdeckt: " + Object.keys(p.found).length + " Orte.</p>";
+    h += "<h3>Verlauf (letzte " + P7_HIST_MAX + ")</h3>" + p7HistTable(p.erkHist);
+    return h;
+  }
+
+  // ---------- Graben ----------
+  function p7Dig(n) {
+    const s = state;
+    if (!s || s.dead) return;
+    if (sleepUi) { showResult(SLEEP_MSG, true); renderAll(); return; }
+    if (busy) { showResult("Erst die laufende Aktion beenden.", true); renderAll(); return; }
+    origPage = "graben";
+    if (s.locId === "camp") { showResult("Im Ruinencamp kann man nicht graben. Geh ein Feld weiter (N/O/S/W).", true); renderAll(); return; }
+    const pos = p7Pos(s); const g = groundAt(pos.x, pos.y);
+    if (g === "glas" && !has(s, "Dynamit")) { p7DigHist(s, { ok: false, msg: "Glasboden: ohne Dynamit kein Graben." }, g); showResult("Glasboden. Hier brauchst du Dynamit (Wiki).", true); renderAll(); return; }
+    if (g === "hart" && !has(s, "Spitzhacke") && digTool(s) !== "Greifer") { p7DigHist(s, { ok: false, msg: "Harter Boden: ohne Spitzhacke kein Graben." }, g); showResult("Harter Boden. Hier brauchst du eine Spitzhacke (Wiki).", true); renderAll(); return; }
+    if (n > 1) runSequence("graben", n); else startAction("graben");
+  }
+  function p7GrabenPage() {
+    const s = state; const p = p7(s);
+    const pos = p7Pos(s); const g = groundAt(pos.x, pos.y);
+    const active = workUi && workUi.aid === "graben";
+    const tool = digTool(s);
+    let h = "<h2>Graben</h2>" + origLive() + '<div class="p7-pic"><img src="assets/gfx/graben.jpg" alt="Grabloch mit Schaufel und Spitzhacke" class="p7-art"></div>' + p7HereHtml(true);
+    const blocked = s.locId === "camp" ? "Im Ruinencamp kann man nicht graben – geh ein Feld weiter." : g === "glas" && !has(s, "Dynamit") ? "Glasboden: Dynamit nötig." : g === "hart" && !has(s, "Spitzhacke") && tool !== "Greifer" ? "Harter Boden: Spitzhacke nötig." : "";
+    if (active) h += '<div class="work-row"><p>Graben ' + ((workUi.i || 0) + 1) + "/" + workUi.n + " " + xLink("abbrechen", "abort") + '</p><div class="work-bar"><i style="width:' + Math.round(workUi.pct || 0) + '%"></i></div></div>';
+    else {
+      [1, 5, 10].forEach((n) => { h += '<p class="p7-btnrow"><a href="#" class="p7-btn" data-x="p7dig|' + n + '">' + (n > 1 ? n + "× " : "") + "Graben</a> <span class=\"p7-cost\">" + origEsc(p7CostText("work", "graben", n)) + "</span></p>"; });
+      if (blocked) h += '<p class="cant">' + origEsc(blocked) + "</p>";
+    }
+    h += "<p>Fundchance hier: <b>" + Math.round(digChance(s) * 100) + " %</b> · Dauer: <b>" + p7WorkSec("graben") + " s</b> · Werkzeug: <b>" + origEsc(tool || "keins") + "</b>" + (has(s, "Spitzhacke") ? " · Spitzhacke dabei" : "") + (has(s, "Dynamit") ? " · Dynamit " + s.inv.Dynamit : "") + "</p>";
+    ["Schaufel", "Greifer"].forEach((t) => { if (has(s, t) && !(s.equip && s.equip.links === t)) h += "<p>" + xLink(t + " in die linke Hand", "left|" + t) + "</p>"; });
+    if (has(s, "U-P-S Päckchen")) h += "<p>" + xLink("U-P-S Päckchen öffnen", "ups") + "</p>";
+    h += '<h3>Was man findet</h3><p class="muted">Häufig Sand, Kronkorken und Knochen, seltener Metall und Edelmetall. Selten Wiki-Fundstücke: Eisenkette, Schriftrolle, Orangensaft, Benzinkanister, U-P-S Päckchen und Quest-Zutaten. Zusätzlich 12 % Chance auf einen Wiki-Gegenstand, den du noch nicht hast.</p>' +
+      '<h3>Was wirkt</h3><ul class="p7-ul">' +
+      "<li><b>Wahrnehmung</b> erhöht die Fundchance (Wiki: 70 % bei 3000 Wahrnehmung; Prototyp: 1 Punkt ≙ 100). Kleidung mit Wahrnehmungsbonus zählt mit.</li>" +
+      "<li><b>Geschwindigkeit</b> verkürzt die Grabdauer (Wiki: 90 Minuten bei 0, nie unter 30 mit Schaufel).</li>" +
+      "<li><b>Schaufel oder Greifer</b> in der linken Hand: schneller (ohne Werkzeug ×1,5 Dauer) und +1 bei Sand und Kronkorken.</li>" +
+      "<li><b>Fähigkeiten</b> Flexibilität, Genauigkeit, Perfektion verbessern die Chance (Perfektion + 3000 Wahrnehmung = 100 %, Wiki).</li>" +
+      "<li><b>Boden</b>: normaler Boden geht immer; <b>harter Boden</b> (Felsboden) braucht Spitzhacke oder Greifer; <b>Glasboden</b> (Glasfläche) braucht Dynamit, 1 Stück je Graben (Wiki). Benannte Orte haben normalen Boden. Im Ruinencamp wird nicht gegraben.</li>" +
+      "<li><b>Kosten</b> je Graben: " + origEsc(p7CostText("work", "graben", 1)) + ". Ab 80 % Müdigkeit sinkt der Ertrag.</li></ul>";
+    h += "<h3>Verlauf (letzte " + P7_HIST_MAX + ")</h3>" + p7HistTable(p.digHist);
+    return h;
+  }
+
+  // ---------- Herstellen mit Bildern ----------
+  const P7_WIKI_IMG = { Nahrung: "assets/rohstoffe/nahrung.gif", Benzin: "assets/rohstoffe/benzin.gif", Edelmetall: "assets/rohstoffe/edelmetall.gif",
+    "Diamant (grün)": "assets/rohstoffe/diamantgruen.gif", "Diamant (blau)": "assets/rohstoffe/diamantblau.gif", "Diamant (rot)": "assets/rohstoffe/diamantrot.gif",
+    Motorrad: "assets/gfx/vehicles/fahr1.gif", Hoverbike: "assets/gfx/vehicles/fahr2.gif" }; // WIKI-Grafiken aus dem Archiv
+  function p7Slug(n) { return String(n).toLowerCase().replace(/ä/g, "ae").replace(/ö/g, "oe").replace(/ü/g, "ue").replace(/ß/g, "ss").replace(/[^a-z0-9]+/g, "-").replace(/^-|-$/g, ""); }
+  function p7ItemImg(name) { return P7_WIKI_IMG[name] || "assets/items/" + p7Slug(name) + ".png"; } // sonst: gezeichnetes Symbol (tools/gen_item_icons.py)
+  const P7_USE = {
+    Stock: "Erste Waffe, liegt automatisch in der Hand.", "Stock mit Stein": "Bessere Anfängerwaffe.", Messer: "Waffe mit Klinge.", Holzspeer: "Starke Holzwaffe.",
+    Steinspeer: "Speer mit Steinspitze.", Metallspeer: "Speer mit Metallspitze.", Spitzhacke: "Graben auf hartem Boden (Wiki).", Schaufel: "Schneller graben, +1 Sand/Kronkorken (linke Hand).",
+    "Edelmetall Schaufel": "Bessere Schaufel.", "Edelmetall Spitzhacke": "Bessere Spitzhacke.",
+    Eimer: "Behälter (Sandbox).", Fernglas: "Spion-Werkzeug.", Papierentchen: "Quest-Gegenstand (Trauriges Mädchen).", Glas: "Rohstoff für Geräte und Bauten.",
+    Wurfnetz: "Tiere fangen beim Jagen (rechte Hand).", Fangnetz: "Kleintiere fangen (rechte Hand).", Werkzeugkoffer: "Fahrzeuge bauen und reparieren.",
+    Motorrad: "Fahrzeug: schneller reisen, Kampfbonus.", Hoverbike: "Fliegendes Fahrzeug.", Nahrung: "Füllt deinen Nahrungsbedarf (Rucksack → essen).",
+    Heiltrank: "Heilt Verletzungen (mit Erste Hilfe).", Schere: "Schneider-Werkzeug.", Sandalen: "Kleidung für die Füße.", Fellhemd: "Kleidung für den Körper.",
+    Ölbehälter: "Transport für Öl.", Gasbehälter: "Transport für Gas.", Urandetektor: "Findet Uran.", Diamantendetektor: "Findet Diamanten.", Erzdetektor: "Findet Erz.",
+    Seil: "Quest- und Bauteil.", Dietrich: "Schlösser öffnen (Quests).", "leere Spritze": "Wird mit Gift gefüllt.", Radio: "Empfängt Nachrichten.", Holzkohle: "Zutat für Tränke.",
+  };
+  function p7UseText(c, name) {
+    if (P7_USE[name]) return P7_USE[name] + (WEAPONS[name] ? " +" + WEAPONS[name].kp + " Kampfpunkte." : "");
+    if (WEAPONS[name]) return "Waffe: +" + WEAPONS[name].kp + " Kampfpunkte.";
+    if (POTIONS[name]) return POTIONS[name].desc + ".";
+    if (CLOTHING[name]) return "Kleidung: +" + (CLOTHING[name].kp || 0) + " Kampfpunkte.";
+    if (SHIELDS[name]) return "Schild: Verteidigung " + SHIELDS[name].def + " (linke Hand).";
+    const ammoFor = Object.keys(AMMO_FOR).filter((w) => AMMO_FOR[w] === name);
+    if (ammoFor.length) return "Munition für " + ammoFor.join(", ") + ".";
+    const it = wikiByName(name);
+    if (it && it.desc) return String(it.desc).slice(0, 160);
+    return String(c.desc || "").replace(/\s*\((WIKI|DESIGN)[^)]*\)/g, "").replace(/^(WIKI|DESIGN)[^:]*:\s*/, "").slice(0, 160);
+  }
+  function p7CraftCard(c) {
+    const s = state;
+    const name = Object.keys(c.result)[0]; const nOut = c.result[name];
+    const ok = canCraft(c); const pay = ok && canPay(s, c.cost) && (!c.goldCost || s.gold >= c.goldCost);
+    const ing = Object.keys(c.cost).map((k) => {
+      const have = k === "gold" ? s.gold : haveRes(s, k); const need = c.cost[k];
+      return '<span class="p7-ing ' + (have >= need ? "ok" : "miss") + '">' + origEsc(k === "gold" ? "Gold" : k) + " " + have + "/" + need + "</span>";
+    }).join(" ") + (c.goldCost ? ' <span class="p7-ing ' + (s.gold >= c.goldCost ? "ok" : "miss") + '">Gold ' + s.gold + "/" + c.goldCost + "</span>" : "");
+    const btn = !ok ? '<span class="cant">' + origEsc(craftLockReason(c) || "gesperrt") + "</span>"
+      : pay ? '<a href="#" class="p7-btn" data-craft="' + c.id + '">herstellen</a> <span class="p7-cost">' + origEsc(p7CostText("craft")) + "</span>" : '<span class="cant">es fehlt: ' + origEsc(missingText(s, c.cost)) + "</span>";
+    return '<div class="p7-craft' + (pay ? " can" : ok ? "" : " lock") + '" data-recipe="' + c.id + '"><img src="' + p7ItemImg(name) + '" alt="' + origEsc(name) + '" width="40" height="40" loading="lazy"><div class="p7-craft-b">' +
+      "<p><b>" + origEsc(c.label) + "</b>" + (nOut > 1 || name !== c.label ? ' <span class="p7-small">→ ' + nOut + "× " + origEsc(name) + "</span>" : "") + ' <span class="p7-small p7-own">im Rucksack: ' + (s.inv[name] || 0) + "</span></p>" +
+      '<p class="p7-use">' + origEsc(p7UseText(c, name)) + "</p><p>" + ing + "</p><p>" + btn + "</p></div></div>";
+  }
+  function p7HerstellenPage() {
+    const s = state; const tl = s.techlevel || 0;
+    const main = CRAFTS.filter((c) => !c.chem && !c.erf && !c.wf && !c.needStammB);
+    const now = main.filter((c) => canCraft(c));
+    const later = main.filter((c) => !canCraft(c));
+    let h = "<h2>Herstellen</h2><p>Beruf: " + origEsc(s.job) + " · Techlevel " + tl + ". Bei den Zutaten steht <b>hast/brauchst</b>" + (lagerOn(s) ? " (Privatlager zählt mit)" : "") + ".</p>";
+    h += "<h3>Jetzt möglich (" + now.length + ")</h3>" + (now.map(p7CraftCard).join("") || '<p class="muted">Noch nichts.</p>');
+    h += '<details class="p7-more"><summary>Gesperrt: Beruf oder Techlevel fehlt (' + later.length + ")</summary>" + later.map(p7CraftCard).join("") + "</details>";
+    [["Chemieküche", "chemie", (c) => c.chem], ["Ideenschmiede", "ideenschmiede", (c) => c.erf], ["Waffenfabrik", "waffenfabrik", (c) => c.wf], ["Stammgebäude", "stammgeb", (c) => c.needStammB && !c.chem && !c.erf && !c.wf]].forEach(([title, page, f]) => {
+      const list = CRAFTS.filter(f);
+      if (list.length) h += '<details class="p7-more"><summary>' + title + " (" + list.length + ")</summary><p>" + origLink(title + " öffnen", 'data-page="' + page + '"') + "</p>" + list.map(p7CraftCard).join("") + "</details>";
+    });
+    h += '<p class="p7-small">Bilder: Rohstoffe und Fahrzeuge aus dem Wiki-Archiv; die übrigen Symbole sind für den Prototyp gezeichnet (DESIGN).</p>';
+    return h;
+  }
+  // Bilder auch in den anderen Rezeptlisten (Chemieküche, Ideenschmiede, Waffenfabrik)
+  const p7CraftRowBase = craftRowHtml;
+  craftRowHtml = function (c) {
+    const h = p7CraftRowBase(c);
+    const name = c && c.result ? Object.keys(c.result)[0] : null;
+    return name ? h.replace("<tr><td>", '<tr><td><img class="p7-ico" src="' + p7ItemImg(name) + '" alt="" width="32" height="32" loading="lazy"> ') : h;
+  };
+
+  // ---------- Eigenschaften: fehlende Wirkungen (Audit Durchgang 7) ----------
+  // WIKI (Charakter/Eigenschaften): Kraft:Intelligenz sollte 3:1 sein, sonst "starke Einbußen bei Kämpfen". Faktor DESIGN.
+  function p7RatioFactor(s) {
+    const k = s.attrs.Kraft || 1, i = s.attrs.Intelligenz || 1;
+    const need = k / 3;
+    return i >= need ? 1 : Math.max(0.6, 0.6 + 0.4 * (i / need));
+  }
+  const p7PlayerKPBase = playerKP;
+  playerKP = function (s) { const kp = p7PlayerKPBase(s); return Math.max(1, Math.floor(kp * p7RatioFactor(s))); };
+  // WIKI: Wahrnehmung "Kleiderbonus" – voller Bonus ab 501 Wahrnehmung (Prototyp ×100 → 5,01). Untergrenze 50 % DESIGN.
+  function p7ClothFactor(s) { return 0.5 + 0.5 * Math.min(1, ((s.attrs.Wahrnehmung || 1) * ATTR_SCALE) / 501); }
+  const p7ClothingBonusBase = clothingBonus;
+  clothingBonus = function (s) { return Math.round(p7ClothingBonusBase(s) * p7ClothFactor(s)); };
+  // WIKI: Geschwindigkeit "beeinflusst wie schnell man ... sich auf der Karte bewegt". −3 % Reisezeit je Punkt über 1, höchstens −45 % (DESIGN).
+  function p7TravelFactor(s) { return 1 - Math.min(0.45, 0.03 * Math.max(0, (s.attrs.Geschwindigkeit || 1) - 1)); }
+  const p7TravelPlanBase = travelPlan;
+  travelPlan = function (from, to) {
+    const r = p7TravelPlanBase(from, to);
+    if (state && r.note === "zu Fuß") { r.ms = Math.max(400, Math.round(r.ms * p7TravelFactor(state))); r.sec = Math.max(1, Math.round(r.ms / 1000)); }
+    return r;
+  };
+  // WIKI: Geschwindigkeit "beeinflusst wie schnell man kämpft": Pause zwischen Kampfrunden 900 ms, −4 % je Punkt, mind. 450 ms (DESIGN).
+  function p7FightDelay() { return state ? Math.max(450, Math.round(900 * (1 - 0.04 * Math.max(0, (state.attrs.Geschwindigkeit || 1) - 1)))) : 900; }
+  // WIKI: Ausdauer "beeinflusst die Tränkeresistenz": Nebenwirkungen (Müdigkeit/Strahlung +) −3 % je Punkt über 1, höchstens −60 % (DESIGN).
+  function p7PotionResist(s) { return Math.min(0.6, 0.03 * Math.max(0, (s.attrs.Ausdauer || 1) - 1)); }
+  const p7ApplyPotionBase = applyPotion;
+  applyPotion = function (pDef) {
+    const r = state ? p7PotionResist(state) : 0;
+    if (!r || !pDef || !(pDef.fatigue > 0 || pDef.rad > 0)) return p7ApplyPotionBase(pDef);
+    const q = Object.assign({}, pDef);
+    if (q.fatigue > 0) q.fatigue = Math.round(q.fatigue * (1 - r));
+    if (q.rad > 0) q.rad = Math.round(q.rad * (1 - r));
+    return p7ApplyPotionBase(q).replace(/\.$/, "") + " (Ausdauer mildert die Nebenwirkung um " + Math.round(r * 100) + " %).";
+  };
+  // WIKI: Ausstrahlung "beeinflusst das Handelskontingent": Einkauf je Stunde 300 + 100 je Punkt über 1 Einheiten (DESIGN).
+  function p7TradeCap(s) { return 300 + 100 * Math.max(0, (s.attrs.Ausstrahlung || 1) - 1); }
+  function p7TradeLeft(s) { const p = p7(s); if (Date.now() - (p.trade.since || 0) > 3600000) { p.trade.since = Date.now(); p.trade.units = 0; } return Math.max(0, p7TradeCap(s) - p.trade.units); }
+  const p7Game = document.getElementById("orig-game");
+  if (p7Game) p7Game.addEventListener("click", (e) => {
+    const a = e.target.closest && e.target.closest("a[data-buy]");
+    const buyAttr = a && a.getAttribute ? a.getAttribute("data-buy") : null;
+    if (!buyAttr || !state || state.dead) return;
+    const bits = buyAttr.split("|"); const n = Math.max(1, parseInt(bits[1], 10) || 1);
+    const left = p7TradeLeft(state);
+    if (n > left) {
+      e.preventDefault(); e.stopImmediatePropagation();
+      showResult("Handelskontingent erschöpft: noch " + left + " von " + p7TradeCap(state) + " Einheiten in dieser Stunde. Mehr Ausstrahlung = größeres Kontingent (Wiki).", true); renderAll();
+      return;
+    }
+    const before = state.inv[bits[0]] || 0;
+    setTimeout(() => { if (state && (state.inv[bits[0]] || 0) > before) { p7(state).trade.units += (state.inv[bits[0]] || 0) - before; save({ quiet: true }); } }, 0);
+  }, true);
+
+  // ---------- Status mit Erklärungen ----------
+  function p7AttrInfo(s, a) {
+    switch (a) {
+      case "Kraft": return ["Kampfpunkte (×3 je Punkt), Schaden 1 + Kraft/3, nötig für Gebäude (Forschungsgrundstück: Kraft 3) und Fahrzeuge.", "Wiki: Kraft zu Intelligenz höchstens 3:1, sonst weniger Kampfkraft. Jetzt " + Math.round(p7RatioFactor(s) * 100) + " % Kampfkraft.", "+3 Kampfpunkte, alle 3 Punkte +1 Schaden."];
+      case "Intelligenz": return ["Erfinden und Herstellen höherer Werkzeuge und Waffen, Kampfpunkte (×1), Forschung: 3 + Intelligenz Researchpunkte je Gang.", "Sollte mindestens ein Drittel der Kraft sein (jetzt nötig: " + Math.ceil((s.attrs.Kraft || 1) / 3) + ").", "+1 Kampfpunkt, +1 Researchpunkt je Forschungsgang, neue Rezepte."];
+      case "Geschwindigkeit": return ["Kampfpunkte (×0,5), Grabdauer, Reisezeit zu Fuß, Tempo der Kampfrunden (Wiki).", "Reisezeit jetzt " + Math.round(p7TravelFactor(s) * 100) + " %, Grabdauer " + p7WorkSec("graben") + " s, Kampfrunde " + p7FightDelay() + " ms.", "−3 % Reisezeit, kürzere Grabdauer, schnellere Kampfrunden, +0,5 Kampfpunkte."];
+      case "Wahrnehmung": return ["Fundchance beim Graben (Wiki), kleine Funde beim Erkunden, Kleiderbonus (Wiki).", "Graben jetzt " + Math.round(digChance(s) * 100) + " %, Kleiderbonus wirkt zu " + Math.round(p7ClothFactor(s) * 100) + " % (voll ab 5,01 ≙ Wiki 501).", "Höhere Grabchance, +1 % Fundchance beim Erkunden, mehr Kleiderbonus."];
+      case "Dynamik": return ["Erfolgschance beim Erkunden (Wiki), Voraussetzung für manche Bauten.", "Entdeckungschance jetzt " + Math.round(p7ErkChances(s).disc * 100) + " %.", "+1 % Entdeckungschance beim Erkunden."];
+      case "Ausstrahlung": return ["Handelskontingent (Wiki), Tierangebote beim Händler, Tiere fangen, Diamanten, Wurfnetz.", "Kontingent jetzt " + p7TradeCap(s) + " Einheiten je Stunde, noch " + p7TradeLeft(s) + " frei.", "+100 Einheiten Handelskontingent, bessere Fangchancen."];
+      case "Ausdauer": return ["Lebenspunkte im Kampf (8 + 2 × Ausdauer), Tränkeresistenz (Wiki): starke Tränke brauchen Ausdauer 10/20/30, Nebenwirkungen werden milder.", "Lebenspunkte jetzt " + playerMaxHP(s) + ", Nebenwirkungen −" + Math.round(p7PotionResist(s) * 100) + " %.", "+2 Lebenspunkte, −3 % Nebenwirkungen."];
+    }
+    return ["", "", ""];
+  }
+  function p7StatusExtra() {
+    const s = state;
+    const rows = ATTRS.map((a) => { const i = p7AttrInfo(s, a); return "<tr><td><b>" + origEsc(a) + "</b><br>" + (s.attrs[a] || 0) + "</td><td>" + origEsc(i[0]) + '<br><span class="p7-small">' + origEsc(i[1]) + "</span></td><td>" + origEsc(i[2]) + "</td></tr>"; }).join("");
+    const meters = [
+      ["Kampfpunkte (KP)", playerKP(s), "Deine Kampfstärke: Kraft ×3 + Intelligenz + Geschwindigkeit ×0,5 + Waffe + Kleidung + Tier + Fahrzeug. Müdigkeit, Energie unter 40 % und Verletzung senken sie."],
+      ["Lebenspunkte", playerMaxHP(s), "So viele Treffer hältst du im Kampf aus (8 + 2 × Ausdauer)."],
+      ["Erfahrung (EP)", s.ep, "Für Arbeit, Kämpfe, Quests und Aufgaben. Schaltet Techlevel und Orte frei (TL1 ab 100, TL2 ab 250, TL3 ab 400 …)."],
+      ["Charakterpunkte (CP)", s.cp, "Mit Go! in Eigenschaften stecken. Jeder Punkt +1."],
+      ["Techlevel", s.techlevel || 0, "Öffnet Berufe, Rezepte und Orte."],
+      ["Müdigkeit", (s.fatigue || 0) + " %", "Steigt mit jeder Aktion (+3, Kampf +8, Mutanten +1). Ab 80 % weniger Ertrag, bei 100 % keine Aktionen mehr. Schlafen senkt sie."],
+      ["Energie", curEnergy(s) + " %", "Sinkt je Aktion (−2, Kampf −6). Unter 40 % weniger Kampfkraft, unter 10 % erschöpft. Schlafen und Tränke füllen sie."],
+      ["Strahlenlast", (s.radiation || 0) + " %", "Steigt auf dem Uranfeld (+2 je Aktion). Bei 100 % schwer verletzt. Sinkt nur im Schlaf und mit Strahlentränken (Wiki)."],
+      ["Nahrung / Wasser (Bedarf)", s.food + " / " + s.water, "Sinken mit der Zeit und je Aktion um 1. Unter −10 stirbt der Charakter. Rucksack → essen/trinken füllt auf."],
+      ["Kampferfahrung (KEP)", s.kep || 0, "Aus Kämpfen; schaltet Kampf-Fähigkeiten frei."],
+      ["Handelserfahrung (HEP)", s.hep || 0, "+1 je Kauf oder Verkauf."],
+      ["Reiseerfahrung (REP)", s.rep || 0, "+1 je 10 gereiste Felder (Wiki)."],
+      ["Naturverbundenheit", s.nv || 0, "Gärtner und Pilzsammler; nötig für Fähigkeiten wie Erste Hilfe."],
+      ["Flexibilität", s.flex || 0, "Verbessert die Grabchance (Fähigkeitenbaum)."],
+      ["Kreativität", s.kreativ || 0, "Chemiker, Schneider, Waffentechniker: +1 je Herstellung (Wiki)."],
+      ["Bauerfahrung", s.bep || 0, "Aus Stammgebäuden und Raketen."],
+      ["Spionageerfahrung", s.sep || 0, "Aus Spion-Aufträgen (Wiki)."],
+      ["Karma", karmaLabel(s), "Helle Taten (Arbeit) oder dunkle (Jagen, Kämpfen); öffnet Licht- oder Schattenhöhle."],
+    ].map((r) => "<tr><td><b>" + origEsc(r[0]) + "</b></td><td>" + origEsc(String(r[1])) + "</td><td>" + origEsc(r[2]) + "</td></tr>").join("");
+    return '<h2>Was die Werte bedeuten</h2><table class="p7-explain"><tr><th>Eigenschaft</th><th>Wirkung</th><th>Nächster Punkt</th></tr>' + rows + "</table>" +
+      '<h3>Anzeigen und Erfahrungsarten</h3><table class="p7-explain p7-meters">' + meters + "</table>" +
+      '<p class="p7-small">Prototyp-Maßstab: 1 Punkt hier ≙ 100 Wiki-Punkte. Wirkungen ohne Wiki-Zahl sind DESIGN.</p>';
+  }
+
+  // ---------- Seiten, HUD, Menü ----------
+  const p7CharMenu = ORIG_MENUS.left.find((g) => g[0] === "Dein Charakter");
+  if (p7CharMenu && !p7CharMenu[1].some((x) => x[0] === "aufgaben")) p7CharMenu[1].unshift(["aufgaben", "Aufgaben"]);
+  const p7ActMenu = ORIG_MENUS.left.find((g) => g[0] === "Aktionen");
+  if (p7ActMenu && !p7ActMenu[1].some((x) => x[0] === "herstellen")) { const i = p7ActMenu[1].findIndex((x) => x[0] === "haus"); p7ActMenu[1].splice(i + 1, 0, ["herstellen", "Herstellen"]); }
+  const p7ExtPageBase = extPage;
+  extPage = function (page) {
+    if (!state) return p7ExtPageBase(page);
+    if (page === "aufgaben") return p7AufgabenPage();
+    if (page === "erkunden") return p7ErkundenPage();
+    if (page === "graben") return p7GrabenPage();
+    if (page === "herstellen") return p7HerstellenPage();
+    return p7ExtPageBase(page);
+  };
+  const p7RenderOrigPageBase = renderOrigPage;
+  renderOrigPage = function () {
+    let h = p7RenderOrigPageBase();
+    if (!state || typeof h !== "string") return h;
+    if (origPage === "status") h = h.replace(/(<h2>Fähigkeiten-Werte<\/h2>)/, p7StatusExtra() + "$1");
+    if (origPage === "arbeiten") h = h.replace(/ <span class="muted">\d+ Sekunden<\/span>/g, "");
+    if (origPage === "handeln") h = h.replace(/(<h2>Handeln<\/h2>)/, '$1<p class="p7-cost">Jeder Kauf/Verkauf: Müdigkeit +' + p7FatAdd("trade") + " · Energie −2 · +1 Handelserfahrung. Handelskontingent: noch " + p7TradeLeft(state) + " von " + p7TradeCap(state) + " Einheiten in dieser Stunde (Ausstrahlung).</p>");
+    return p7DecorateCosts(h, origPage);
+  };
+  const p7ExtCmdBase = extCmd;
+  extCmd = function (cmd) {
+    const bits = String(cmd || "").split("|");
+    if (bits[0] === "p7erk") { p7Erkunden(); return; }
+    if (bits[0] === "p7dig") { p7Dig(parseInt(bits[1], 10) || 1); return; }
+    if (bits[0] === "p7move") { p7Move(parseInt(bits[1], 10) || 0, parseInt(bits[2], 10) || 0, bits[3] || "landkarte"); return; }
+    return p7ExtCmdBase(cmd);
+  };
+  // Der alte Erkunden-Link läuft jetzt über die neue Logik.
+  doErkunden = function () { p7Erkunden(); };
+  // Die alte Einführung (5 Schritte) ist im Leitfaden aufgegangen: keine zweite Belohnungskette mehr.
+  noteTutorial = function () {};
+  // HUD-Ort, Aufgaben-Kasten und mobile Aufgabenzeile werden direkt in renderOriginal() eingesetzt (p7HudLocHtml, p7GuideBoxHtml, p7GuideMiniHtml).
+  function p7HudLocHtml() { return '<a href="#" class="infoline loc-link" data-page="landkarte" title="Landkarte öffnen"><span>Ort:</span><span>' + origEsc(p7LocText(state)) + "</span></a>"; }
+  const p7RenderAllBase = renderAll;
+  renderAll = function () {
+    if (state && !state.dead && state.attrs) {
+      const p = p7(state);
+      if (state.locId && state.locId !== "field") p.visited[state.locId] = 1;
+      p7GuideTick();
+    }
+    return p7RenderAllBase.apply(this, arguments);
+  };
+  window.__p7 = { GUIDE, tick: () => p7GuideTick(), cur: () => state && p7Current(state), loc: () => state && p7LocText(state) };
 
   document.addEventListener("keydown", (e) => {
     if (!state || state.dead || busy) return;
