@@ -1,6 +1,6 @@
 // Service Worker Endzeitspiel (PWA). Bei jeder neuen Version VERSION hochzählen, dann wird der Cache erneuert.
 // Code und Seite (HTML/JS/CSS/Manifest): Netz zuerst, Cache als Rückfall (offline). Bilder: Cache zuerst.
-const VERSION = "ezs-pwa-4";
+const VERSION = "ezs-pwa-5";
 const PRECACHE = [
   "./",
   "index.html",
@@ -78,7 +78,8 @@ const PRECACHE = [
   "assets/rohstoffe/wasser.gif"
 ];
 self.addEventListener("install", (e) => {
-  e.waitUntil(caches.open(VERSION).then((c) => c.addAll(PRECACHE)).then(() => self.skipWaiting()));
+  // cache: "reload" = am HTTP-Cache vorbei (GitHub Pages schickt max-age=600), sonst landen alte Dateien im neuen Cache
+  e.waitUntil(caches.open(VERSION).then((c) => c.addAll(PRECACHE.map((u) => new Request(u, { cache: "reload" })))).then(() => self.skipWaiting()));
 });
 self.addEventListener("activate", (e) => {
   e.waitUntil(caches.keys().then((keys) => Promise.all(keys.filter((k) => k !== VERSION).map((k) => caches.delete(k)))).then(() => self.clients.claim()));
@@ -92,7 +93,8 @@ self.addEventListener("fetch", (e) => {
   const code = req.mode === "navigate" || /\.(html|js|css|webmanifest)$/.test(url.pathname) || url.pathname.endsWith("/");
   if (code) {
     e.respondWith(
-      fetch(req).then((res) => {
+      // no-cache: immer beim Server nachfragen (ETag, meist 304) statt eine bis zu 10 min alte Kopie aus dem HTTP-Cache zu nehmen
+      fetch(new Request(req.url, { cache: "no-cache", credentials: "same-origin" })).then((res) => {
         if (res && res.ok) { const copy = res.clone(); caches.open(VERSION).then((c) => c.put(req, copy)); }
         return res;
       }).catch(() => caches.match(req, { ignoreSearch: true }).then((r) => r || (req.mode === "navigate" ? caches.match("index.html") : Response.error())))
