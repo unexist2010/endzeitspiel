@@ -740,9 +740,9 @@ body.ingame .dead-overlay { background: #000; color: #eee; }
 .p6-eat p { margin: 3px 0; }
 .p6-near p { margin: 3px 0; line-height: 1.6; }
 
-/* ===== Mobile / PWA (DESIGN): nur unter 800 px. Darüber bleibt das Desktop-Layout unverändert. ===== */
+/* ===== Mobile / PWA (DESIGN): unter 800 px Breite und Handys quer (Touch, max. 520 px hoch). Darüber bleibt das Desktop-Layout unverändert. ===== */
 .m-only { display: none !important; }
-@media (max-width: 800px) {
+@media (max-width: 800px), (pointer: coarse) and (max-height: 520px) and (max-width: 1100px) {
   html { overflow-x: hidden; }
   body.ingame .page-wrap { padding: 0; }
   body.ingame { -webkit-text-size-adjust: 100%; }
@@ -758,7 +758,7 @@ body.ingame .dead-overlay { background: #000; color: #eee; }
     font-family: Arial, Helvetica, sans-serif; font-size: 13px; color: #eee; min-height: 44px; box-sizing: border-box;
   }
   #m-top .ms { display: flex; flex-direction: column; min-width: 0; line-height: 1.2; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
-  #m-top .ms b { color: #c9a24a; font-size: 10px; font-weight: normal; text-transform: uppercase; letter-spacing: 0.04em; }
+  #m-top .ms b { color: #c9a24a; font-size: 11px; font-weight: normal; text-transform: uppercase; letter-spacing: 0.04em; }
 
   #m-tabs {
     position: fixed; left: 0; right: 0; bottom: 0; z-index: 80;
@@ -767,7 +767,7 @@ body.ingame .dead-overlay { background: #000; color: #eee; }
   }
   #m-tabs button {
     min-height: 58px; padding: 4px 1px; margin: 0; border: 0; border-right: 1px solid #222; border-radius: 0;
-    background: #141414; color: #e6c35c; font: 10px Arial, Helvetica, sans-serif; line-height: 1.15;
+    background: #141414; color: #e6c35c; font: 11px Arial, Helvetica, sans-serif; line-height: 1.15;
     display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 2px; text-shadow: none; box-shadow: none;
     -webkit-tap-highlight-color: rgba(201, 162, 74, 0.3); word-break: break-word;
   }
@@ -796,7 +796,8 @@ body.ingame .dead-overlay { background: #000; color: #eee; }
   #orig-game[data-mopen="mehr"] .mbox[data-mg="mehr"] {
     display: grid; grid-template-columns: 1fr 1fr; gap: 0 6px; padding-bottom: 4px;
   }
-  #orig-game[data-mopen] .mbox h3 { grid-column: 1 / -1; font-size: 14px; padding: 8px; }
+  #orig-game[data-mopen] .mbox { background: #232323; box-shadow: none; border-color: #555; }
+  #orig-game[data-mopen] .mbox h3 { grid-column: 1 / -1; font-size: 14px; padding: 9px 10px 8px; background: #161616; color: #e6c35c; border-bottom: 1px solid #c9a24a; }
   #orig-game[data-mopen] .mbox a {
     display: flex; align-items: center; min-height: 44px; box-sizing: border-box; padding: 6px 10px;
     font-size: 13px; border-bottom: 1px solid #333;
@@ -810,6 +811,7 @@ body.ingame .dead-overlay { background: #000; color: #eee; }
   .land { flex-direction: column; gap: 6px; }
   .land-pic { width: 100%; flex: none; height: 110px; }
   .land-back { text-align: left; }
+  .p6-landpic small { font-size: 12px; }
   #orig-sheet img { max-width: 100%; height: auto; }
   #orig-sheet a[href] {
     display: inline-flex; align-items: center; min-height: 44px; min-width: 44px; box-sizing: border-box;
@@ -826,4 +828,24 @@ body.ingame .dead-overlay { background: #000; color: #eee; }
   #orig-sheet .field-grid .field-cell { width: 44px !important; height: 44px !important; min-height: 44px; padding: 0; display: flex !important; }
 
   .help-box { max-width: calc(100vw - 24px); box-sizing: border-box; }
+  #orig-sheet .field-grid .field-cell .xy { font-size: 11px; }
+  #orig-sheet .field-grid .field-cell .du { font-size: 11px; }
+  /* Sichere Ränder (Notch, Kamera-Loch, Gestenleiste) – wichtig im Querformat wegen viewport-fit=cover */
+  #m-top { padding-left: calc(8px + env(safe-area-inset-left)); padding-right: calc(8px + env(safe-area-inset-right)); }
+  #m-tabs { padding-left: env(safe-area-inset-left); padding-right: env(safe-area-inset-right); }
+  #orig-mid { padding-left: env(safe-area-inset-left); padding-right: env(safe-area-inset-right); box-sizing: border-box; }
+  #orig-game[data-mopen] #orig-left, #orig-game[data-mopen="mehr"] #orig-right { padding-left: calc(8px + env(safe-area-inset-left)); padding-right: calc(8px + env(safe-area-inset-right)); }
+}
+/* Breite Mobilansicht (Tablet, Handy quer): Kennwerte in einer Zeile */
+@media (min-width: 600px) and (max-width: 800px), (pointer: coarse) and (max-height: 520px) and (min-width: 600px) and (max-width: 1100px) {
+  #m-top { grid-template-columns: repeat(7, 1fr); }
+  #orig-game[data-mopen] .mbox[data-mg] { grid-template-columns: 1fr 1fr 1fr; }
+}
+/* Handy quer: niedrige Reiter (Symbol neben Text), Schublade an die Höhe angepasst */
+@media (pointer: coarse) and (max-height: 520px) and (max-width: 1100px) {
+  #m-tabs button { min-height: 48px; flex-direction: row; gap: 6px; font-size: 12px; }
+  #m-tabs button .mi { font-size: 17px; }
+  #screen-game { padding-bottom: calc(54px + env(safe-area-inset-bottom)); }
+  #orig-game[data-mopen] #orig-left, #orig-game[data-mopen="mehr"] #orig-right { bottom: calc(50px + env(safe-area-inset-bottom)); max-height: calc(100vh - 110px); }
+  .orig-head { display: none; } /* Querformat: Höhe für den Inhalt, Uhrzeit steht in der Spielerinfo */
 }

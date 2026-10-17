@@ -141,6 +141,15 @@ Tests: `smoke-pass6.js` (33 Prüfungen). Browser-Playtest: `node tests/playtest-
 - **Lokal hosten:** `python3 tools/serve-pwa.py 8765` im Ordner prototype. Für das Handy braucht es HTTPS, z. B. `cloudflared tunnel --url http://localhost:8765` (temporäre trycloudflare-Adresse, kein Konto) oder dauerhaft GitHub Pages / Netlify / Cloudflare Pages.
 - **Test:** `node tests/playtest-pwa/mobile.js` (Pixel 7, 412×915, Touch): Service Worker, Cache, Manifest, Installierbarkeit (Chrome), Icons, Offline-Start, alle Menüpunkte über die Reiter (frisch und mit Stamm), keine Überbreite, Tipp-Ziele, Karte, Balken, Desktop unverändert. Screenshots in `playtest-pwa/`.
 
+## Live-Test GitHub Pages (Okt 2026)
+
+Live unter **https://unexist2010.github.io/endzeitspiel/** (Repo `unexist2010/endzeitspiel`, Deploy-Checkout `/workspace/ezs-pages`).
+- Alle Browser-Tests laufen auch gegen die echte Seite: `LIVE_URL=https://unexist2010.github.io/endzeitspiel/ node tests/playtest-pass6/run-all.js` bzw. `… node tests/playtest-pwa/mobile.js`. Der Test-Haken für app.js kommt dann per Request-Interception (nur im Test); die PWA-Prüfungen laufen ohne Eingriff (echter Service Worker, Bereich `/endzeitspiel/`, Offline-Start, Installierbarkeit).
+- Darstellung in 6 Größen: `node tests/playtest-live/sizes.js` (Pixel 7 412×915, kleines Handy 360×740, Handy quer 915×412, Tablet 800×1280, Desktop 1366×768 und 1920×1080) mit Screenshots und Prüfungen (Überbreite, Bilder fehlen/verzerrt, kleine Schrift, Tipp-Ziele, Inhalt unter den Reitern, abgeschnittener Text).
+- Service-Worker-Update: `node tests/playtest-live/sw-update.js install` vor dem Deploy, `NEW_CACHE=ezs-pwa-N NEW_V=N node tests/playtest-live/sw-update.js check` danach.
+- Behoben: Handy quer bekam das Desktop-Layout mit winzigen Links → mobile Ansicht auch für Touch-Geräte bis 520 px Höhe (Kennwerte in einer Zeile, niedrige Reiter, Kopfbild ausgeblendet); sichere Ränder (Notch) links/rechts; Kopfleisten- und Reiter-Beschriftung 11 px statt 10 px, Kartenzahlen mobil 11 px statt 9 px; Überschriften in der Schublade ohne versetzten menu.gif-Balken; Tablet/Querformat: Kennwerte in einer Zeile, Schublade 3-spaltig; „im Bau (noch X s)“ in der Stammgebäude-Tabelle läuft jetzt live mit.
+- Version: Service-Worker-Cache `ezs-pwa-2`, `?v=8`.
+
 ## Speichern & Migration
 
 - Autosave nach Reisen, AGs, Kampf, Craft, Quests, Needs-Tick, Karma-Aktionen.

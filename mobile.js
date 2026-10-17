@@ -1,7 +1,7 @@
-// Mobile Ansicht (unter 800 px Breite, DESIGN): Kopfleiste mit Kennwerten, Reiter unten öffnen die Menügruppen als Schublade.
+// Mobile Ansicht (unter 800 px Breite und Handys quer, DESIGN): Kopfleiste mit Kennwerten, Reiter unten öffnen die Menügruppen als Schublade.
 // Liest nur das gerenderte DOM (#orig-left / #orig-right) – app.js bleibt unverändert, Klicks laufen weiter über den Handler auf #orig-game.
 (function () {
-  var MQ = window.matchMedia ? window.matchMedia("(max-width: 800px)") : { matches: false, addEventListener: function () {} };
+  var MQ = window.matchMedia ? window.matchMedia("(max-width: 800px), (pointer: coarse) and (max-height: 520px) and (max-width: 1100px)") /* gleich wie styles.css */ : { matches: false, addEventListener: function () {} };
   var game = document.getElementById("orig-game");
   var left = document.getElementById("orig-left");
   var right = document.getElementById("orig-right");

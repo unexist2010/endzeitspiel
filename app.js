@@ -8225,7 +8225,7 @@
       const lock = p5Lock(s, g); const lv = st.geb[g.id] || 0; const cost = sgCost(g, st);
       const building = st.build && st.build.id === g.id;
       let act;
-      if (building) act = "im Bau (noch " + p5BuildLeft(st) + " s)";
+      if (building) act = 'im Bau (noch <span class="p6-build-left">' + p5BuildLeft(st) + "</span> s)"; // läuft live mit (p6BuildTick)
       else if (g.tank) act = "Stufe " + lv + "/" + TANK_MAX_LEVEL + (lock ? ' <span class="cant">' + origEsc(lock) + "</span>" : " " + xLink("ausbauen", "sgeb|" + g.id));
       else if (lock === "steht") act = "steht";
       else act = lock ? '<span class="cant">' + origEsc(lock) + "</span>" : (stammMissing(s, cost) ? '<span class="cant">' + origEsc("es fehlt: " + stammMissing(s, cost)) + "</span>" : xLink("bauen", "sgeb|" + g.id));
@@ -8441,7 +8441,7 @@
     const pct = Math.min(100, ((Date.now() - st.build.start) / tot) * 100);
     bar.style.width = pct.toFixed(1) + "%";
     const p = document.querySelector("#orig-sheet .p6-build-pct"); if (p) p.textContent = Math.round(pct) + "%";
-    const l = document.querySelector("#orig-sheet .p6-build-left"); if (l) l.textContent = String(p5BuildLeft(st));
+    document.querySelectorAll("#orig-sheet .p6-build-left").forEach((l) => { l.textContent = String(p5BuildLeft(st)); }); // Balkenzeile und Tabellenzeile
   }
   setInterval(p6BuildTick, 250);
 
