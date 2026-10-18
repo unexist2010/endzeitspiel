@@ -187,6 +187,11 @@ Live unter **https://unexist2010.github.io/endzeitspiel/** (Repo `unexist2010/en
 
 ---
 
+## Durchgang 10 (18.10.2026)
+- Begleitroboter **Optimus** (DESIGN, nicht aus dem Original; Anspielung auf Teslas Optimus): eigener Begleiter-Platz neben den Tieren. Menü Aktionen → Optimus (ganze Seite), Kasten rechts über den Ressourcen, auf dem Handy Karte oben im Blatt + Abzeichen am Reiter „Res./Stamm“, wenn eine Anfrage wartet.
+- Reparatur in 5 Stufen mit Ersatzteilen (Servomotor, Akkuzelle, Platine, Sensorkopf, KI-Kern): Sammeln → Wasser+Nahrung → Graben → Erkunden → Mitdenken. Testkauf „Für 20 € kaufen“ (kein echtes Geld). **Testmodus aktiv** (`OPTIMUS_TEST_GRANT = true`): jeder Stand bekommt ihn voll repariert. Akku eingebaut, aber aus (`OPTIMUS_BATTERY = false`).
+- Arbeitet selbst mit eigener Position, Prioritäten, Modulen, Flucht statt Kampf, seltenem Schaden, Anfragen mit Bestätigen/Ablehnen und bis zu 4 Std. Nachholen. Details: NOTES-pass10.md. sw ezs-pwa-11, ?v=17.
+
 ## Durchgang 9 (18.10.2026)
 - Nahrung/Wasser sind der Vorrat (inv.Nahrung/inv.Wasser = Bedarf), automatisch verbraucht, kein „Essen und Trinken“ mehr; Warnung ab ≤ 20. Migration alter Stände ×8 je Stück (Schlüssel v3, nichts gelöscht).
 - Neuer Menüpunkt Aktionen → Nahrungssuche: Sammeln je Gelände (Wald/Oase viel, Wüste/Ruinen wenig), Beifunde, Angriffe, Jagd auf Wilden Hund, Wildschwein, Echse, Ratte; „Was dieses Feld bietet“, Verlauf 20.

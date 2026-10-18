@@ -1065,3 +1065,71 @@ a.fh-hud { display: block; margin: 2px 0 6px; font-size: 11px; color: #e6c35c; t
   .fh-box .p7-btn, .fh-task .p7-btn { min-height: 44px; display: inline-flex; align-items: center; }
   .fh-box .fh-more a, .fh-here-link a, a.fh-hud { display: inline-block; min-height: 44px; line-height: 44px; }
 }
+/* Durchgang 10: Optimus (DESIGN) – Gold/Schwarz */
+.p10-box { border-color: #c9a24a; }
+.p10-box h3 { color: #f0d58a; }
+.p10-head { display: flex; gap: 8px; align-items: flex-start; font-size: 11px; }
+.p10-head img { width: 40px; height: 40px; background: #0b0b0b; border: 1px solid #6b5520; border-radius: 3px; flex: none; }
+.p10-st { color: #f0d58a; text-transform: none; }
+.p10-st-beschädigt { color: #ff6b5b; }
+.p10-job { color: #d8cfb0; margin-top: 2px; }
+.p10-bar { height: 6px; background: #1a1708; border: 1px solid #6b5520; margin: 5px 0 3px; border-radius: 2px; overflow: hidden; }
+.p10-bar > i { display: block; height: 100%; background: linear-gradient(90deg, #8a6a1f, #f0c75a); transition: width 0.45s linear; }
+.p10-bar.big { height: 10px; max-width: 360px; }
+.p10-small { font-size: 11px; color: #bfb593; }
+.p10-log { list-style: none; margin: 4px 0; padding: 0; font-size: 11px; color: #d8cfb0; }
+.p10-log li { margin: 2px 0; line-height: 1.25; }
+.p10-log li span { color: #c9a24a; margin-right: 3px; }
+.p10-req { margin: 6px 0; padding: 6px 7px; border: 1px solid #e6c35c; background: rgba(230, 195, 92, 0.14); font-size: 11.5px; color: #f6e7b8; border-radius: 3px; }
+.p10-req.bad { border-color: #c0573f; background: rgba(192, 87, 63, 0.15); }
+.p10-req span { display: block; margin-bottom: 5px; font-weight: bold; }
+.p10-req.big { font-size: 13px; max-width: 520px; }
+a.p10-btn { display: inline-block; padding: 3px 9px; margin: 2px 4px 2px 0; background: #111; color: #f0d58a !important; border: 1px solid #c9a24a; border-radius: 3px; text-decoration: none; font-weight: bold; }
+a.p10-btn.p10-ok { background: #c9a24a; color: #111 !important; }
+a.p10-btn:hover { filter: brightness(1.15); }
+a.p10-open { display: block; margin-top: 4px; font-size: 11px; color: #e6c35c; }
+.p10-page h3 { color: #f0d58a; border-bottom: 1px solid #6b5520; margin: 16px 0 6px; padding-bottom: 2px; }
+.p10-design { font-size: 11px; color: #bfb593; font-style: italic; }
+.p10-test { display: inline-block; padding: 4px 8px; background: #1a1708; border: 1px dashed #c9a24a; color: #f0d58a; font-size: 12px; }
+.p10-top { display: flex; gap: 14px; align-items: flex-start; flex-wrap: wrap; }
+.p10-big { width: 220px; height: 220px; background: radial-gradient(circle at 50% 40%, #2a2410, #050505 70%); border: 1px solid #c9a24a; border-radius: 4px; }
+.p10-stats { flex: 1; min-width: 220px; }
+.p10-stats p { margin: 3px 0; }
+.p10-bad { color: #ff8b70; }
+.p10-tab { border-collapse: collapse; width: 100%; font-size: 12px; }
+.p10-tab td, .p10-tab th { border-bottom: 1px solid #3a3115; padding: 4px 6px; vertical-align: top; text-align: left; }
+.p10-tab tr.done td { color: #cfe7c2; }
+.p10-tab tr.locked td { opacity: 0.55; }
+.p10-tab tr.eq td { background: rgba(201, 162, 74, 0.12); }
+.p10-done { color: #9fd18b; font-weight: bold; }
+.p10-part { display: inline-flex; align-items: center; gap: 3px; margin: 1px 8px 1px 0; white-space: nowrap; }
+.p10-ico { vertical-align: middle; background: #0b0b0b; border-radius: 3px; }
+.p10-buy { display: flex; flex-wrap: wrap; gap: 8px 14px; align-items: center; margin: 14px 0; padding: 10px 12px; border: 1px solid #c9a24a; background: linear-gradient(180deg, #1c1709, #0a0a0a); border-radius: 4px; }
+.p10-buy > div { flex: 1; min-width: 200px; }
+a.p10-buybtn { font-size: 14px; padding: 7px 14px; background: #c9a24a; color: #111 !important; }
+.p10-owned { color: #9fd18b; font-weight: bold; }
+.p10-testkauf { width: 100%; font-size: 11px; color: #e6c35c; }
+.p10-prios b.p10-on { color: #111; background: #c9a24a; padding: 1px 6px; border-radius: 2px; }
+.p10-why { font-size: 12px; color: #d8cfb0; }
+.p10-away { margin: 8px 0; padding: 8px 10px; border: 1px solid #c9a24a; background: rgba(201, 162, 74, 0.1); }
+.p10-away p { margin: 4px 0; }
+.p10-logtab td:first-child { color: #c9a24a; white-space: nowrap; width: 48px; }
+.p10-parts { margin-top: 14px; }
+.p10-hint { margin: 8px 0; padding: 6px 9px; border-left: 3px solid #c9a24a; background: rgba(201, 162, 74, 0.08); font-size: 12px; }
+.p10-hint.done { opacity: 0.75; }
+.p10-mob { margin: 0 0 8px; padding: 6px 8px; border: 1px solid #6b5520; background: #0d0c07; border-radius: 4px; font-size: 12px; }
+.p10-mob .p10-mline { display: flex; align-items: center; gap: 8px; }
+.p10-mob .p10-mline img { width: 28px; height: 28px; flex: none; }
+.p10-mob .p10-mline span { flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; color: #d8cfb0; }
+.p10-mob .p10-mline a { font-size: 20px; color: #e6c35c; padding: 0 6px; min-height: 36px; line-height: 36px; text-decoration: none; }
+.p10-mob .p10-req a.p10-btn { min-height: 40px; line-height: 34px; padding: 3px 14px; }
+#m-tabs button.m-badge { position: relative; }
+#m-tabs button.m-badge::after { content: "1"; position: absolute; top: 2px; right: 22%; min-width: 16px; height: 16px; line-height: 16px; font-size: 10px; font-weight: bold; color: #111; background: #f0c75a; border-radius: 8px; box-shadow: 0 0 0 2px #111; }
+@media (max-width: 760px) {
+  .p10-big { width: 150px; height: 150px; }
+  .p10-top { gap: 8px; }
+  .p10-tab { font-size: 11.5px; }
+  .p10-page a, .p10-box a.p10-btn { display: inline-block; min-height: 40px; line-height: 40px; }
+  .p10-page a.p10-btn { line-height: 32px; }
+  .p10-tab td, .p10-tab th { padding: 4px 3px; }
+}

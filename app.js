@@ -3114,7 +3114,7 @@
         return '<div class="mbox"><h3>' + title + "</h3>" + links + "</div>";
       }).join("");
     }
-    left.innerHTML = boxes(ORIG_MENUS.left);
+    if (!p10RightOnly) left.innerHTML = boxes(ORIG_MENUS.left); // Durchgang 10: Optimus frischt nur die rechte Spalte auf
     const res = [
       ["wasser.gif", "Wasser", state.water, p9LowCls(state.water)],
       ["nahrung.gif", "Nahrung", state.food, p9LowCls(state.food)],
@@ -3147,10 +3147,12 @@
       '<div class="infoline"><span>Zeit:</span><span id="orig-clock">' + hh + ":" + mm + " Uhr</span></div>" +
       '<a class="cp-link" href="#" data-page="status">' + state.cp + " CPs verfügbar Klicke hier.</a></div>" +
       p7GuideBoxHtml() +
+      p10BoxHtml() + // Durchgang 10: Optimus über den Ressourcen
       '<div class="mbox"><h3>Ressourcen</h3>' + res + "</div>" +
       boxes(state.stamm ? ORIG_MENUS.right : [["Stamm", [["gruendung", "Gründung"], ["beitreten", "Beitreten"]]]]);
     const note = (resultLines.length && resultPage === origPage) ? resultLines[resultLines.length - 1] : null;
     const noteHtml = note ? '<p class="orig-result' + (note.bad ? " bad" : "") + '">' + p8ResultAnimal(note.text) + p8Coords(origEsc(note.text), origPage) + "</p>" : ""; // Durchgang 8
+    if (p10RightOnly) return;
     sheet.innerHTML = (origPage !== "aufgaben" ? p7GuideMiniHtml() : "") + noteHtml + renderOrigPage();
   }
 
@@ -9931,6 +9933,713 @@
     const b = String(cmd || "").split("|");
     if (b[0] === "fhdo") { fhDo(b[1]); return; }
     return fhExtCmd(cmd);
+  };
+
+  // ===================================================================================================
+  // Durchgang 10 – Begleitroboter „Optimus“. ALLES DESIGN: nicht aus dem Original-Endzeitspiel
+  // (Anspielung auf Teslas Optimus). Eigener Begleiter-Platz neben den Tieren, die Tiere bleiben unverändert.
+  // ===================================================================================================
+  var p10RightOnly = false;
+  let OPTIMUS_TEST_GRANT = true; // DESIGN: Testmodus – jeder Charakter bekommt Optimus sofort voll repariert (ohne Kauf)
+  let OPTIMUS_BATTERY = false;   // DESIGN: Akku-System eingebaut, für den Test abgeschaltet
+  const P10_IMG = "assets/gfx/optimus/";
+  const P10_PARTS = ["Servomotor", "Akkuzelle", "Platine", "Sensorkopf", "KI-Kern"]; // DESIGN
+  const P10_PART_INFO = { // DESIGN
+    Servomotor: { img: "servomotor", d: "Gelenkmotor für Arme und Beine. Häufigstes Ersatzteil." },
+    Akkuzelle: { img: "akkuzelle", d: "Energiezelle für längere Arbeit draußen." },
+    Platine: { img: "platine", d: "Steuerplatine. Ohne sie kann Optimus nicht graben." },
+    Sensorkopf: { img: "sensorkopf", d: "Kamera- und Sensorkopf zum Erkunden." },
+    "KI-Kern": { img: "kikern", d: "Seltener Rechenkern. Erst damit denkt Optimus mit." },
+  };
+  const P10_PART_W = { Servomotor: 35, Akkuzelle: 25, Platine: 20, Sensorkopf: 13, "KI-Kern": 7 }; // DESIGN
+  const P10_STAGES = [ // DESIGN: Mengen steigen von Stufe zu Stufe
+    null,
+    { need: { Servomotor: 3 }, l: "Sammeln", d: "sammelt Holz, Stein, Metall, Kunststoff, Sand und Erz" },
+    { need: { Akkuzelle: 3, Servomotor: 2 }, l: "Wasser + Nahrung", d: "sucht Wasser und Nahrung für deinen Vorrat" },
+    { need: { Platine: 4, Servomotor: 3 }, l: "Graben", d: "gräbt auf freien Feldern" },
+    { need: { Sensorkopf: 3, Platine: 3, Akkuzelle: 3 }, l: "Erkunden", d: "erkundet Felder und findet Kleinkram und Ersatzteile" },
+    { need: { "KI-Kern": 2, Sensorkopf: 2, Platine: 4, Akkuzelle: 4 }, l: "Mitdenken", d: "plant für Aufgaben und Gebäude und fragt, ob er bauen oder herstellen soll" },
+  ];
+  const P10_LVL = [0, 20, 60, 120, 200, 320, 480, 700, 1000, 1400]; // DESIGN: Optimus-EP je Stufe
+  const P10_MODS = [ // DESIGN
+    { id: "rucksack", n: "Größerer Rucksack", lvl: 2, img: "mod-rucksack", e: "+50 % Menge je Gang beim Sammeln", jobs: ["sammeln"] },
+    { id: "wassersensor", n: "Wassersensor", lvl: 3, img: "mod-wassersensor", e: "+60 % Wasser", jobs: ["wasser"] },
+    { id: "bohrer", n: "Bohrer", lvl: 4, img: "mod-bohrer", e: "+50 % beim Graben, auch harter Boden", jobs: ["graben"] },
+    { id: "spurensucher", n: "Spurensucher", lvl: 5, img: "mod-spurensucher", e: "+60 % Nahrung", jobs: ["nahrung"] },
+    { id: "metalldetektor", n: "Metalldetektor", lvl: 6, img: "mod-metalldetektor", e: "doppelte Chance auf Ersatzteile, findet Erz", jobs: ["graben", "erkunden"] },
+    { id: "solarpanel", n: "Solarpanel", lvl: 7, img: "mod-solarpanel", e: "lädt den Akku beim Arbeiten (+0,5 %/Min.)", jobs: ["laden"] },
+  ];
+  const P10_JOB = { // DESIGN: Dauer der Arbeit am Ziel (Laufzeit kommt dazu), Optimus-EP
+    sammeln: { ms: 12000, ep: 2, st: "sammelt" }, wasser: { ms: 12000, ep: 2, st: "sucht Wasser" }, nahrung: { ms: 15000, ep: 2, st: "sucht Nahrung" },
+    graben: { ms: 20000, ep: 3, st: "gräbt" }, erkunden: { ms: 30000, ep: 4, st: "erkundet" }, laden: { ms: 0, ep: 0, st: "lädt" }, ruhe: { ms: 30000, ep: 0, st: "wartet" },
+  };
+  const P10_STEP_MS = 500;              // DESIGN: Laufzeit je Feld
+  const P10_OFFLINE_MAX = 4 * 3600000;  // DESIGN: höchstens 4 Std. Nachholen
+  const P10_RES = { Holz: "holz", Stein: "stein", Metall: "metall", Kunststoff: "kunststoff", Sand: "sand", Erz: "erz", "Öl": "oel" };
+  const P10_SCARCE = 60;   // DESIGN: „knapp“ unter 60
+  const P10_VORRAT = 150;  // DESIGN: Ziel bei „Vorräte sichern“
+  const P10_BAG = 60;      // DESIGN: eigene Tasche, wenn Rucksack und Lager voll sind
+  const P10_DECLINE_MS = 10 * 60000; // DESIGN: abgelehnte Anfrage 10 Min. nicht wiederholen
+  const P10_PRIOS = [["auto", "Automatisch"], ["vorrat", "Vorräte sichern"], ["aufgabe", "Aktuelle Aufgabe"], ["gebaeude", "Gebäude"], ["knapp", "Knappe Rohstoffe"]];
+  const P10_FLEE_ENEMY = 0.06, P10_FLEE_ELSE = 0.02, P10_DMG = 0.002, P10_DMG_GLAS = 0.02; // DESIGN
+  const P10_BAT_MS_PER_PCT = 72000; // DESIGN: 100 % reichen für 2 Std. Arbeit
+
+  function p10Pause() { return typeof window !== "undefined" && !!window.__ezsOptimusPause; }
+  function p10O(s) {
+    s = s || state; if (!s) return null;
+    let o = s.optimus;
+    if (!o || typeof o !== "object") o = s.optimus = {};
+    const d = { stage: 0, owned: null, found: false, oep: 0, x: 50, y: 100, job: null, prio: "auto", target: null, equip: [], why: "", log: [], req: null, declined: {},
+      damaged: null, bat: 100, clock: Date.now(), bag: {}, stats: { jobs: 0, fled: 0, parts: 0, items: {} }, setup: false, away: null };
+    Object.keys(d).forEach((k) => { if (o[k] === undefined || o[k] === null && (k === "log" || k === "bag" || k === "declined" || k === "equip" || k === "stats")) o[k] = d[k]; });
+    if (OPTIMUS_TEST_GRANT && o.stage < 5) {
+      o.stage = 5; o.found = true; o.owned = o.owned || "test"; o.clock = Date.now();
+      p10Log(o, "Testmodus: Optimus ist voll repariert und gehört dir (ohne Kauf).", Date.now());
+    }
+    return o;
+  }
+  function p10Lvl(o) { let l = 1; for (let i = 1; i < P10_LVL.length; i++) if (o.oep >= P10_LVL[i]) l = i + 1; return l; }
+  function p10Abil(o) { const st = o.stage || 0; return { sammeln: st >= 1, versorgen: st >= 2, graben: st >= 3, erkunden: st >= 4, mitdenken: st >= 5 }; }
+  function p10Time(t) { return new Intl.DateTimeFormat("de-AT", { timeZone: "Europe/Vienna", hour: "2-digit", minute: "2-digit", hourCycle: "h23" }).format(new Date(t)); }
+  function p10Log(o, m, t, main) {
+    o.log = o.log || []; o.log.push({ t: t || Date.now(), m: m });
+    if (o.log.length > 100) o.log.splice(0, o.log.length - 100);
+    if (main && !p10Catching) log("Optimus: " + m, main);
+  }
+  let p10Catching = false;
+  function p10PlaceName(x, y) { const p = placeAt(x, y); return (p ? p.name : "Freies Land") + " (" + x + "/" + y + ")"; }
+  function p10Have(s, k) {
+    const inLager = s.house && s.house.lager && (s.house.lagerBuilt || !s.house.type) ? (s.house.lager[k] || 0) : 0;
+    return (s.inv[k] || 0) + inLager;
+  }
+  function p10Afford(s, cost) { return Object.keys(cost).every((k) => (k === "gold" ? s.gold : p10Have(s, k)) >= cost[k]); }
+  function p10IsRoh(k) { return ROHSTOFFE.some((r) => r[0] === k); }
+  function p10BagN(o) { return Object.keys(o.bag || {}).reduce((n, k) => n + (o.bag[k] || 0), 0); }
+  function p10ModsUnlocked(o) { const l = p10Lvl(o); return P10_MODS.filter((m) => l >= m.lvl); }
+  function p10Has(o, id) { return (o.equip || []).includes(id); }
+
+  // ---- Wohin für welchen Rohstoff? ----
+  function p10FieldFor(s, o, kind, res) {
+    const tl = s.techlevel || 0; let aids;
+    if (kind === "sammeln") aids = [P10_RES[res]];
+    else if (kind === "wasser") aids = ["wasser"];
+    else if (kind === "nahrung") aids = ["holz", "wasser"]; // Wald oder Oase
+    else return null;
+    const locs = LOCATIONS.filter((l) => (l.actions || []).some((a) => aids.includes(a)) && placeGate(l, s).open && aids.every((a) => !(l.actions || []).includes(a) || !ACTIONS[a] || (ACTIONS[a].needTL || 0) <= tl));
+    if (!locs.length) return null;
+    locs.sort((a, b) => manhattan(o, a) - manhattan(o, b));
+    return locs[0];
+  }
+  function p10FreeField(s, o, r, hardOk) {
+    for (let i = 0; i < 25; i++) {
+      const x = clamp(o.x + rand(-r, r), 1, 200), y = clamp(o.y + rand(-r, r), 1, 200);
+      if (placeAt(x, y)) continue;
+      if (groundAt(x, y) === "hart" && !hardOk) continue;
+      return { x, y };
+    }
+    return null;
+  }
+  // ---- Was wird gerade gebraucht? ----
+  function p10TaskCost(s, t) {
+    const g = t.g;
+    switch (g.t) {
+      case "inv": return { [g.k]: g.n };
+      case "need": case "cost": return g.cost;
+      case "house": { const h = HOUSES.find((x) => x.id === g.id); return h ? h.cost : null; }
+      case "lager": return LAGER_COST;
+      case "lagerN": return { [g.k]: g.n };
+      case "craft": { const c = CRAFTS.find((x) => x.id === g.id); return c ? c.cost : null; }
+      case "crafts": { const id = g.ids.find((x) => !p7Met(s, { t: "craft", id: x })); const c = id && CRAFTS.find((x) => x.id === id); return c ? c.cost : null; }
+    }
+    return null;
+  }
+  function p10Missing(s, cost, why, out, mode) {
+    if (!cost) return;
+    Object.keys(cost).forEach((k) => {
+      if (k === "gold") return;
+      const have = mode === "inv" ? (s.inv[k] || 0) : mode === "lager" ? ((s.house && s.house.lager && s.house.lager[k]) || 0) : p10Have(s, k);
+      const miss = cost[k] - have;
+      if (miss > 0 && (P10_RES[k] || k === "Wasser" || k === "Nahrung")) out.push({ k, miss, why });
+    });
+  }
+  function p10TaskNeeds(s) {
+    const out = []; const cur = p7Current(s); if (!cur) return out;
+    const tasks = cur.open && cur.open.length ? cur.open : [cur.task];
+    tasks.forEach((t) => { if (!p7Met(s, t.g)) p10Missing(s, p10TaskCost(s, t), "Aufgabe „" + t.l + "“", out, t.g.t === "inv" || t.g.t === "need" || t.g.t === "cost" ? "inv" : t.g.t === "lagerN" ? "lager" : null); });
+    return out;
+  }
+  function p10TargetDef(id) {
+    if (!id) return null;
+    const [kind, k] = id.split(":");
+    if (kind === "house") { const h = HOUSES.find((x) => x.id === k); return h && { kind, id: k, name: h.name, cost: h.cost }; }
+    if (kind === "lager") return { kind: "lager", id: "lager", name: "Privatlager", cost: LAGER_COST };
+    if (kind === "build") { const b = BUILDINGS.find((x) => x.id === k); return b && { kind, id: k, name: b.name, cost: b.cost }; }
+    return null;
+  }
+  function p10TargetDone(s, td) {
+    if (!td) return true;
+    if (td.kind === "house") return !!(s.house && s.house.type === td.id);
+    if (td.kind === "lager") return !!(s.house && s.house.lagerBuilt);
+    if (td.kind === "build") return !!(s.buildings && s.buildings[td.id]);
+    return true;
+  }
+  function p10TargetNeeds(s, o) {
+    const out = []; const td = p10TargetDef(o.target);
+    if (td && !p10TargetDone(s, td)) p10Missing(s, td.cost, "Gebäude „" + td.name + "“", out);
+    return out;
+  }
+  function p10Scarce(s, o, ab) {
+    const out = [];
+    Object.keys(P10_RES).forEach((k) => { const h = p10Have(s, k); if (h < P10_SCARCE && p10FieldFor(s, o, "sammeln", k)) out.push({ k, miss: P10_SCARCE - h, why: "knapp (" + h + ")" }); });
+    if (ab.versorgen) ["Wasser", "Nahrung"].forEach((k) => { const h = s.inv[k] || 0; if (h < P10_SCARCE) out.push({ k, miss: P10_SCARCE - h, why: "Vorrat knapp (" + h + ")" }); });
+    out.sort((a, b) => b.miss - a.miss);
+    return out;
+  }
+
+  // ---- Ausrüstung: wählt selbst das Beste für den Auftrag ----
+  function p10Equip(s, o, job, t) {
+    const un = p10ModsUnlocked(o); const slots = p10Lvl(o) >= 5 ? 2 : 1;
+    const score = (m) => {
+      if (m.jobs.includes(job.kind)) return m.id === "metalldetektor" && job.kind === "graben" ? 2 : 3;
+      if (m.id === "solarpanel" && OPTIMUS_BATTERY && o.bat < 60) return 2.5;
+      if (m.id === "metalldetektor" && o.stage < 5) return 1.5;
+      if (m.id === "rucksack" && (job.kind === "graben" || job.kind === "erkunden")) return 1;
+      return 0.5;
+    };
+    const pick = un.slice().sort((a, b) => score(b) - score(a) || b.lvl - a.lvl).slice(0, slots);
+    const ids = pick.map((m) => m.id);
+    const why = pick.map((m) => m.n + ": " + (m.jobs.includes(job.kind) ? "passt zu „" + P10_JOB[job.kind].st + "“ – " + m.e : m.id === "solarpanel" && OPTIMUS_BATTERY && o.bat < 60 ? "Akku unter 60 %" : "freier Platz – " + m.e)).join(" · ");
+    const old = (o.equip || []).slice().sort().join(","), now = ids.slice().sort().join(",");
+    if (old !== now && ids.length) p10Log(o, "wechselt Ausrüstung: " + pick.map((m) => m.n).join(" + ") + " (" + (pick[0].jobs.includes(job.kind) ? "beste für „" + P10_JOB[job.kind].st + "“" : "passt am besten") + ").", t);
+    o.equip = ids; o.why = why || "";
+  }
+
+  // ---- Auftrag wählen ----
+  function p10MkJob(s, o, kind, tx, ty, t, res, why) {
+    const dist = Math.abs(o.x - tx) + Math.abs(o.y - ty);
+    const j = { kind, res: res || null, tx, ty, fx: o.x, fy: o.y, t0: t, tr: dist * P10_STEP_MS, wk: P10_JOB[kind].ms, why: why || "", id: (o.stats.jobs || 0) + 1 };
+    return j;
+  }
+  function p10ChargeRate(s) { // DESIGN %/Min.
+    if (["reaktor1", "reaktor2", "reaktor3"].some((id) => stammHas(s, id))) return { r: 10, at: "camp", n: "Reaktor" };
+    if (hasHouse(s) || s.stamm) return { r: 3, at: "camp", n: hasHouse(s) ? "Haus" : "Stammlager" };
+    return { r: 1, at: null, n: "unterwegs" };
+  }
+  function p10Choose(s, o, t) {
+    const ab = p10Abil(o); if (!ab.sammeln) return null;
+    if (OPTIMUS_BATTERY && o.bat <= 8) {
+      const cr = p10ChargeRate(s); const tx = cr.at ? 50 : o.x, ty = cr.at ? 100 : o.y;
+      const j = p10MkJob(s, o, "laden", tx, ty, t, null, "Akku leer – lädt (" + cr.n + ", " + cr.r + " %/Min.)");
+      j.wk = Math.ceil((100 - o.bat) / cr.r) * 60000; j.rate = cr.r;
+      p10Equip(s, o, j, t); return j;
+    }
+    const packFull = packCap(s) - packLoad(s) < 10 && !(s.house && s.house.lagerBuilt) && p10BagN(o) >= P10_BAG;
+    const tryNeed = (n) => {
+      if (n.k === "Wasser") { if (!ab.versorgen) return null; const l = p10FieldFor(s, o, "wasser"); return l && p10MkJob(s, o, "wasser", l.x, l.y, t, "Wasser", n.why); }
+      if (n.k === "Nahrung") { if (!ab.versorgen) return null; const l = p10FieldFor(s, o, "nahrung"); return l && p10MkJob(s, o, "nahrung", l.x, l.y, t, "Nahrung", n.why); }
+      if (packFull) return null;
+      const l = p10FieldFor(s, o, "sammeln", n.k); return l && p10MkJob(s, o, "sammeln", l.x, l.y, t, n.k, n.why);
+    };
+    const lists = [];
+    const supply = [];
+    if (ab.versorgen) {
+      const lim = o.prio === "vorrat" ? P10_VORRAT : 30;
+      const low = [["Nahrung", s.food], ["Wasser", s.water]].filter((x) => x[1] <= lim).sort((a, b) => a[1] - b[1]);
+      low.forEach((x) => supply.push({ k: x[0], miss: lim - x[1], why: (o.prio === "vorrat" ? "Vorräte sichern" : "dein Vorrat ist niedrig") + " (" + x[0] + " " + x[1] + ")" }));
+    }
+    if (o.prio === "knapp") lists.push(p10Scarce(s, o, ab));
+    else if (o.prio === "gebaeude") lists.push(p10TargetNeeds(s, o), p10TaskNeeds(s));
+    else if (o.prio === "aufgabe") lists.push(p10TaskNeeds(s), p10TargetNeeds(s, o));
+    else lists.push(p10TaskNeeds(s), p10TargetNeeds(s, o));
+    if (o.prio !== "knapp") lists.unshift(supply);
+    // ab und zu graben/erkunden (DESIGN: jeder 7. Gang), wenn nichts dringend ist
+    const urgent = supply.length > 0;
+    const side = () => {
+      const opts = [];
+      if (ab.graben) { const f = p10FreeField(s, o, 4, p10ModsUnlocked(o).some((m) => m.id === "bohrer")); if (f) opts.push(p10MkJob(s, o, "graben", f.x, f.y, t, null, "Graben nach Brauchbarem und Ersatzteilen")); }
+      if (ab.erkunden) { const f = p10FreeField(s, o, 6, true); if (f) opts.push(p10MkJob(s, o, "erkunden", f.x, f.y, t, null, "Erkunden in der Nähe")); }
+      return opts.length ? opts[rand(0, opts.length - 1)] : null;
+    };
+    let job = null;
+    if (!urgent && (o.stats.jobs || 0) % 7 === 6) job = side();
+    for (const list of lists) { if (job) break; for (const n of list) { job = tryNeed(n); if (job) break; } }
+    if (!job && o.prio !== "knapp") for (const n of p10Scarce(s, o, ab)) { job = tryNeed(n); if (job) break; }
+    if (!job) job = side();
+    if (!job) { job = p10MkJob(s, o, "ruhe", o.x, o.y, t, null, packFull ? "Rucksack, Lager und Tasche voll – Ladung abholen" : "nichts zu tun"); }
+    p10Equip(s, o, job, t);
+    return job;
+  }
+
+  // ---- Abliefern ----
+  function p10Deliver(s, o, k, n) {
+    if (n <= 0) return "";
+    if (k === "Nahrung" || k === "Wasser") { addInv(s, k, n); return "Vorrat"; }
+    if (!p10IsRoh(k)) { addInv(s, k, n); return "Rucksack"; }
+    const free = Math.max(0, packCap(s) - packLoad(s));
+    const a = Math.min(n, free); if (a) addInv(s, k, a);
+    let rest = n - a; let where = a ? "Rucksack" : "";
+    if (rest > 0 && s.house && s.house.lagerBuilt) {
+      const h = houseDef(s); const cap = h ? h.lager : 0; const put = Math.max(0, Math.min(rest, cap - (s.house.lager[k] || 0)));
+      if (put) { s.house.lager[k] = (s.house.lager[k] || 0) + put; rest -= put; where = where ? where + " + Privatlager" : "Privatlager"; }
+    }
+    if (rest > 0) { const put = Math.max(0, Math.min(rest, P10_BAG - p10BagN(o))); if (put) { o.bag[k] = (o.bag[k] || 0) + put; where = where ? where + " + seine Tasche" : "seine Tasche"; } }
+    return where || "nirgends (alles voll)";
+  }
+  function p10Unload(s, o) {
+    const ks = Object.keys(o.bag || {}); if (!ks.length) return 0;
+    let moved = 0;
+    ks.forEach((k) => {
+      const n = o.bag[k] || 0; let free = Math.max(0, packCap(s) - packLoad(s)); let a = Math.min(n, free);
+      if (a) addInv(s, k, a);
+      let rest = n - a;
+      if (rest > 0 && s.house && s.house.lagerBuilt) { const h = houseDef(s); const put = Math.max(0, Math.min(rest, (h ? h.lager : 0) - (s.house.lager[k] || 0))); if (put) { s.house.lager[k] = (s.house.lager[k] || 0) + put; rest -= put; a += put; } }
+      moved += a; if (rest > 0) o.bag[k] = rest; else delete o.bag[k];
+    });
+    return moved;
+  }
+
+  // ---- Ersatzteile ----
+  function p10PickPart(s, o) {
+    const st = P10_STAGES[(o.stage || 0) + 1];
+    if (st && Math.random() < 0.7) {
+      const miss = Object.keys(st.need).filter((k) => (s.inv[k] || 0) < st.need[k]);
+      if (miss.length) return miss[rand(0, miss.length - 1)];
+    }
+    let r = Math.random() * 100;
+    for (const k of P10_PARTS) { r -= P10_PART_W[k]; if (r < 0) return k; }
+    return "Servomotor";
+  }
+  function p10SpareN(s) { return P10_PARTS.reduce((n, k) => n + (s.inv[k] || 0), 0); }
+  const P10_FIND = { graben: 0.02, erkunden: 0.03, nahrungssuche: 0.015, cave: 0.25, visit: 0.08, metall: 0.04, kunststoff: 0.04 }; // DESIGN
+  function p10PlayerFind(s, src) {
+    if (!s || s.dead) return "";
+    const o = p10O(s);
+    if (o.stage >= 5 && p10SpareN(s) >= 3) return ""; // fertig repariert: nur noch ein paar Teile zum Flicken
+    if (Math.random() >= (P10_FIND[src] || 0)) return "";
+    const k = p10PickPart(s, o); addInv(s, k, 1); o.stats.parts = (o.stats.parts || 0) + 1;
+    p10Log(o, "Du hast ein Ersatzteil gefunden: 1× " + k + ".", Date.now());
+    return "Ersatzteil für Optimus gefunden: 1× " + k + "!";
+  }
+  function p10AppendResult(txt) {
+    if (resultLines.length) resultLines[resultLines.length - 1].text += " " + txt; else showResult(txt);
+    renderResultBanner(); log(txt, "good");
+  }
+  ["graben", "cave", "visit", "metall", "kunststoff"].forEach((aid) => {
+    const d = ACTIONS[aid]; if (!d || typeof d.run !== "function") return;
+    const base = d.run;
+    d.run = function (s) {
+      const r = base.apply(this, arguments);
+      if (r && r.ok !== false) { const f = p10PlayerFind(s || state, aid); if (f) r.msg = (r.msg || "") + " " + f; }
+      return r;
+    };
+  });
+  const p10ErkBase = p7ErkundenFinish;
+  p7ErkundenFinish = function () { const s = state; const dead0 = !s || s.dead; p10ErkBase(); if (!dead0 && state && !state.dead) { const f = p10PlayerFind(state, "erkunden"); if (f) { p10AppendResult(f); save({ quiet: true }); renderAll(); } } };
+  const p10ForBase = p9ForageFinish;
+  p9ForageFinish = function () { const s = state; const dead0 = !s || s.dead; p10ForBase(); if (!dead0 && state && !state.dead) { const f = p10PlayerFind(state, "nahrungssuche"); if (f) { p10AppendResult(f); save({ quiet: true }); renderAll(); } } };
+
+  // ---- Auftrag abschließen ----
+  function p10Add(sum, k, n) { if (sum && n > 0) sum.items[k] = (sum.items[k] || 0) + n; }
+  function p10Finish(s, o, j, t, sum) {
+    o.x = j.tx; o.y = j.ty;
+    const where = p10PlaceName(j.tx, j.ty);
+    if (OPTIMUS_BATTERY) {
+      if (j.kind === "laden") { o.bat = 100; p10Log(o, "Akku voll geladen.", t); return; }
+      o.bat = clamp(o.bat - (j.tr + j.wk) / P10_BAT_MS_PER_PCT + (p10Has(o, "solarpanel") ? (j.tr + j.wk) / 120000 : 0), 0, 100);
+    }
+    if (j.kind === "ruhe") return;
+    // Flucht statt Kampf
+    const pl = placeAt(j.tx, j.ty);
+    const foes = pl && pl.enemies && pl.enemies.length ? pl.enemies : null;
+    if (Math.random() < (foes ? P10_FLEE_ENEMY : P10_FLEE_ELSE)) {
+      const fid = foes ? foes[rand(0, foes.length - 1)] : null;
+      const fn = fid && ENEMIES[fid] ? ENEMIES[fid].name : (Math.random() < 0.5 ? "Plünderer" : "Wilder Hund");
+      o.stats.fled = (o.stats.fled || 0) + 1; if (sum) sum.fled++;
+      p10Log(o, "flieht vor " + fn + " bei " + where + " – kein Kampf, Auftrag abgebrochen.", t, "info");
+      return;
+    }
+    const mul = (id, f) => (p10Has(o, id) ? f : 1);
+    const got = [];
+    const give = (k, n) => { n = Math.max(0, Math.round(n)); if (!n) return; const w = p10Deliver(s, o, k, n); got.push(n + " " + k + (w && w !== "Rucksack" && w !== "Vorrat" ? " (" + w + ")" : "")); o.stats.items[k] = (o.stats.items[k] || 0) + n; p10Add(sum, k, n); };
+    let partCh = 0;
+    if (j.kind === "sammeln") { give(j.res, rand(3, 6) * mul("rucksack", 1.5)); if (j.res === "Erz" && Math.random() < 0.2) give("Kristall", 1); }
+    else if (j.kind === "wasser") give("Wasser", rand(5, 12) * mul("wassersensor", 1.6));
+    else if (j.kind === "nahrung") give("Nahrung", rand(4, 9) * mul("spurensucher", 1.6));
+    else if (j.kind === "graben") {
+      const pool = [["Sand", 2, 4, 30], ["Stein", 1, 3, 20], ["Kronkorken", 1, 2, 20], ["Metall", 1, 2, 10], ["Knochen", 1, 1, 10]];
+      if (p10Has(o, "metalldetektor")) pool.push(["Erz", 1, 2, 12]);
+      let r = Math.random() * pool.reduce((n, p) => n + p[3], 0);
+      for (const p of pool) { r -= p[3]; if (r < 0) { give(p[0], rand(p[1], p[2]) * mul("bohrer", 1.5)); break; } }
+      partCh = 0.03;
+    } else if (j.kind === "erkunden") {
+      if (Math.random() < 0.6) { const pool = [["Kronkorken", 1, 3], ["Holz", 2, 4], ["Knochen", 1, 1], ["Kräuter", 1, 1], ["Metall", 1, 2]]; const p = pool[rand(0, pool.length - 1)]; give(p[0], rand(p[1], p[2])); }
+      partCh = 0.06;
+    }
+    if (partCh && Math.random() < partCh * mul("metalldetektor", 2) && !(o.stage >= 5 && p10SpareN(s) >= 3)) {
+      const k = p10PickPart(s, o); addInv(s, k, 1); o.stats.parts = (o.stats.parts || 0) + 1; if (sum) sum.parts++;
+      got.push("Ersatzteil 1× " + k + "!");
+    }
+    const ep = P10_JOB[j.kind].ep; const l0 = p10Lvl(o); o.oep += ep; o.stats.jobs = (o.stats.jobs || 0) + 1; if (sum) sum.jobs++;
+    const verb = { sammeln: "sammelt", wasser: "schöpft", nahrung: "findet", graben: "gräbt", erkunden: "erkundet" }[j.kind];
+    p10Log(o, verb + " " + (got.length ? got.join(", ") : "nichts") + " – " + where + ".", t);
+    const l1 = p10Lvl(o);
+    if (l1 > l0) {
+      const nm = P10_MODS.filter((m) => m.lvl === l1);
+      p10Log(o, "erreicht Stufe " + l1 + "!" + (nm.length ? " Neues Modul: " + nm.map((m) => m.n).join(", ") + "." : ""), t, "good");
+    }
+    // Schaden (sehr selten)
+    const glas = !pl && groundAt(j.tx, j.ty) === "glas";
+    if (Math.random() < (glas ? P10_DMG_GLAS : P10_DMG)) {
+      const cause = glas ? "Strahlung" : "Plünderer";
+      const part = P10_PARTS.slice().sort((a, b) => (s.inv[b] || 0) - (s.inv[a] || 0)).find((k) => (s.inv[k] || 0) > 0);
+      if (part) { takeInv(s, part, 1); p10Log(o, "wurde beschädigt (" + cause + ") und flickt sich selbst mit 1× " + part + " aus deinem Rucksack.", t, "info"); if (sum) sum.patched = (sum.patched || 0) + 1; }
+      else { o.damaged = { cause, at: t }; o.job = null; p10Log(o, "ist beschädigt (" + cause + ") und wartet, bis du ihn mit einem Ersatzteil flickst.", t, "bad"); if (sum) sum.dmg = true; }
+    }
+    if (!o.damaged) p10CheckReq(s, o, t);
+  }
+
+  // ---- Anfragen (Stufe 5: Mitdenken) ----
+  function p10ReqFor(s, kind, id) {
+    if (kind === "house") { const h = HOUSES.find((x) => x.id === id); if (!h || hasHouse(s) || (s.techlevel || 0) < h.tl || !p10Afford(s, h.cost)) return null; return { kind, id, text: "Material für " + h.name + " komplett – jetzt bauen?", camp: true }; }
+    if (kind === "lager") { if (!hasHouse(s) || s.house.lagerBuilt || !p10Afford(s, LAGER_COST)) return null; return { kind, id: "lager", text: "Material für das Privatlager komplett – jetzt bauen?", camp: true }; }
+    if (kind === "build") { const b = BUILDINGS.find((x) => x.id === id); if (!b || (s.buildings && s.buildings[id]) || !p10Afford(s, b.cost)) return null; return { kind, id, text: "Material für " + b.name + " komplett – jetzt bauen?", camp: true }; }
+    if (kind === "craft") {
+      const c = CRAFTS.find((x) => x.id === id); if (!c || !canCraft(c) || (c.goldCost && s.gold < c.goldCost)) return null;
+      const invOk = Object.keys(c.cost).every((k) => (k === "gold" ? s.gold : s.inv[k] || 0) >= c.cost[k]);
+      if (!invOk && !p10Afford(s, c.cost)) return null;
+      return { kind, id, text: "Material für " + c.label.replace(/ (fertigen|herstellen|bauen)$/, "") + " komplett – jetzt herstellen?", camp: !invOk };
+    }
+    if (kind === "quest") { const q = QUESTS.find((x) => x.id === id); const st = s.quests && s.quests[id]; if (!q || !st || st.claimed || q.chain || q.autoClaim || !q.check(s)) return null; return { kind, id, text: "Quest „" + q.title + "“ erfüllt – jetzt abschließen?" }; }
+    return null;
+  }
+  function p10CheckReq(s, o, t) {
+    if ((o.stage || 0) < 5 || o.req) return;
+    const cands = [];
+    const cur = p7Current(s);
+    if (cur && o.prio !== "gebaeude" && o.prio !== "knapp") (cur.open && cur.open.length ? cur.open : [cur.task]).forEach((tk) => {
+      const g = tk.g; if (p7Met(s, g)) return;
+      if (g.t === "house") cands.push(["house", g.id]);
+      else if (g.t === "lager") cands.push(["lager", "lager"]);
+      else if (g.t === "craft") cands.push(["craft", g.id]);
+      else if (g.t === "crafts") { const id = g.ids.find((x) => !p7Met(s, { t: "craft", id: x })); if (id) cands.push(["craft", id]); }
+      else if (g.t === "quest") cands.push(["quest", g.q]);
+    });
+    const td = p10TargetDef(o.target);
+    if (td && !p10TargetDone(s, td)) cands.push([td.kind, td.id]);
+    QUESTS.forEach((q) => { const st = s.quests && s.quests[q.id]; if (st && !st.claimed && st.status !== "done") cands.push(["quest", q.id]); });
+    for (const [kind, id] of cands) {
+      const key = kind + ":" + id;
+      if (o.declined[key] && t - o.declined[key] < P10_DECLINE_MS) continue;
+      let r = null; try { r = p10ReqFor(s, kind, id); } catch (e) { r = null; }
+      if (r) { r.key = key; r.at = t; o.req = r; p10Log(o, "fragt: " + r.text, t, "good"); return; }
+    }
+  }
+  function p10ReqStillOk(s, o) { if (!o.req) return; const r = p10ReqFor(s, o.req.kind, o.req.id); if (!r) { o.req = null; } }
+  function p10Confirm() {
+    const s = state; const o = p10O(s); const r = o.req; if (!r) return;
+    if (busy) { showResult("Erst die laufende Aktion beenden.", true); renderAll(); return; }
+    const now = p10ReqFor(s, r.kind, r.id);
+    if (!now) { o.req = null; showResult("Das geht gerade nicht mehr (Material fehlt oder schon erledigt).", true); save({ quiet: true }); renderAll(); return; }
+    o.req = null; p10Log(o, "Bestätigt: " + r.text.replace(/ – jetzt.*$/, ""), Date.now());
+    const run = () => {
+      if (r.kind === "house") extCmd("house|" + r.id);
+      else if (r.kind === "lager") extCmd("lager");
+      else if (r.kind === "build") buildBuilding(BUILDINGS.find((x) => x.id === r.id));
+      else if (r.kind === "craft") doCraft(CRAFTS.find((x) => x.id === r.id));
+      else if (r.kind === "quest") tryCompleteQuest(r.id);
+      save({ quiet: true }); renderAll();
+    };
+    if (now.camp && state.locId !== "camp") { log("Optimus: Für den Bau geht es zuerst ins Ruinencamp.", "sys"); travelTo("camp", { after: run }); return; }
+    run();
+  }
+  function p10Decline() {
+    const o = p10O(); const r = o.req; if (!r) return;
+    o.declined[r.key] = Date.now(); o.req = null;
+    p10Log(o, "Abgelehnt: " + r.text.replace(/ – jetzt.*$/, "") + ". Er fragt frühestens in 10 Minuten wieder.", Date.now());
+    save({ quiet: true }); renderAll();
+  }
+
+  // ---- Reparatur, Kauf, Flicken ----
+  function p10Repair() {
+    const s = state; const o = p10O(s); const n = (o.stage || 0) + 1; const st = P10_STAGES[n];
+    if (!st) return "Optimus ist schon voll repariert.";
+    if (!o.found) return "Du hast Optimus noch nicht gefunden. Er liegt im Schrottfeld (60/120).";
+    const miss = Object.keys(st.need).filter((k) => (s.inv[k] || 0) < st.need[k]).map((k) => (st.need[k] - (s.inv[k] || 0)) + "× " + k);
+    if (miss.length) return "Für Stufe " + n + " fehlt noch: " + miss.join(", ") + ".";
+    Object.keys(st.need).forEach((k) => takeInv(s, k, st.need[k]));
+    o.stage = n; o.setup = o.setup || false;
+    if (n === 1) { o.x = 60; o.y = 120; o.clock = Date.now(); o.job = null; }
+    p10Log(o, "Reparatur Stufe " + n + " fertig: " + st.l + " – er " + st.d + ".", Date.now(), "good");
+    return "Optimus Stufe " + n + " repariert: " + st.l + ".";
+  }
+  function p10Buy() {
+    const s = state; const o = p10O(s);
+    if (o.stage >= 5) return o.owned === "test" ? "Optimus ist bereits im Besitz (Testmodus)." : "Optimus ist bereits voll repariert.";
+    let n = 0; P10_PARTS.forEach((k) => { const c = s.inv[k] || 0; if (c) { n += c; takeInv(s, k, c); } });
+    const bonus = n * 25; // DESIGN: 25 Optimus-EP je gesammeltem Teil
+    o.oep += bonus; o.stage = 5; o.found = true; o.owned = "kauf"; o.clock = Date.now(); o.job = null;
+    if (o.x === 50 && o.y === 100) { /* bleibt im Camp */ }
+    p10Log(o, "Testkauf – kein echtes Geld: sofort voll repariert." + (n ? " " + n + " gesammelte Ersatzteile → +" + bonus + " Optimus-EP." : ""), Date.now(), "good");
+    return "Testkauf – kein echtes Geld: Optimus ist voll repariert." + (n ? " Deine " + n + " Ersatzteile wurden zu " + bonus + " Optimus-EP." : "");
+  }
+  function p10Patch() {
+    const s = state; const o = p10O(s); if (!o.damaged) return "Optimus ist nicht beschädigt.";
+    const part = P10_PARTS.slice().sort((a, b) => (s.inv[b] || 0) - (s.inv[a] || 0)).find((k) => (s.inv[k] || 0) > 0);
+    let used;
+    if (part) { takeInv(s, part, 1); used = "1× " + part; }
+    else if ((s.inv.Metall || 0) >= 10) { takeInv(s, "Metall", 10); used = "10 Metall (Notflicken, DESIGN)"; }
+    else return "Zum Flicken brauchst du 1 Ersatzteil oder 10 Metall.";
+    o.damaged = null; o.clock = Date.now(); o.job = null;
+    p10Log(o, "geflickt mit " + used + ". Er arbeitet weiter.", Date.now(), "good");
+    return "Optimus geflickt mit " + used + ".";
+  }
+  function p10Pickup() {
+    const s = state; const o = p10O(s); const before = p10BagN(o);
+    if (!before) return "Seine Tasche ist leer.";
+    const moved = p10Unload(s, o); const left = p10BagN(o);
+    return moved ? "Ladung abgeholt: " + moved + " Einheiten." + (left ? " " + left + " passen nicht mehr in Rucksack/Lager." : "") : "Rucksack und Lager sind voll – nichts abgeholt.";
+  }
+
+  // ---- Zeitschleife ----
+  function p10Advance(s, o, now, sum) {
+    let guard = 0, changed = false;
+    if (!o.clock || o.clock > now) o.clock = now;
+    while (guard++ < 5000) {
+      if ((o.stage || 0) < 1 || o.damaged) { o.clock = now; break; }
+      if (p10BagN(o)) p10Unload(s, o);
+      if (!o.job) { const j = p10Choose(s, o, o.clock); if (!j) { o.clock = now; break; } o.job = j; changed = true; }
+      const j = o.job; const end = j.t0 + j.tr + j.wk;
+      if (end > now) { o.clock = now; break; }
+      o.job = null; o.clock = end; p10Finish(s, o, j, end, sum); changed = true;
+    }
+    return changed;
+  }
+  function p10FmtDur(ms) { const m = Math.round(ms / 60000); const h = Math.floor(m / 60); return (h ? h + " Std. " : "") + (m % 60) + " Min."; }
+  function p10CatchUp(s, now) {
+    const o = p10O(s); if (!o || (o.stage || 0) < 1) { if (o) o.clock = now; return null; }
+    const gap = now - (o.clock || now);
+    if (gap < 120000) return null;
+    let capped = false;
+    if (gap > P10_OFFLINE_MAX) { const shift = gap - P10_OFFLINE_MAX; o.clock += shift; if (o.job) o.job.t0 += shift; capped = true; }
+    const sum = { jobs: 0, items: {}, fled: 0, parts: 0, dmg: false, patched: 0 };
+    const lvl0 = p10Lvl(o); const ep0 = o.oep;
+    p10Catching = true;
+    try { p10Advance(s, o, now, sum); } finally { p10Catching = false; }
+    const items = Object.keys(sum.items).map((k) => "+" + sum.items[k] + " " + k);
+    let m = "Während du weg warst (" + p10FmtDur(gap) + (capped ? ", gezählt höchstens 4 Std." : "") + "): Optimus hat " + sum.jobs + " Aufträge erledigt" + (items.length ? ": " + items.join(", ") : "") + ".";
+    if (o.oep > ep0) m += " +" + (o.oep - ep0) + " Optimus-EP" + (p10Lvl(o) > lvl0 ? ", jetzt Stufe " + p10Lvl(o) : "") + ".";
+    if (sum.parts) m += " " + sum.parts + " Ersatzteil(e) gefunden.";
+    if (sum.fled) m += " " + sum.fled + "× vor Gegnern geflohen.";
+    if (sum.patched) m += " " + sum.patched + "× beschädigt und selbst geflickt.";
+    if (sum.dmg) m += " Er ist beschädigt und wartet auf ein Ersatzteil.";
+    if (o.req) m += " Er hat eine Anfrage für dich.";
+    o.away = { at: now, text: m, gap, capped, sum };
+    p10Log(o, m, now);
+    return m;
+  }
+  const p10AfterBase = p91AfterLoad;
+  p91AfterLoad = function () {
+    const s = state;
+    let m = null;
+    if (s && !s.dead) { p10O(s); m = p10CatchUp(s, Date.now()); }
+    p10AfterBase();
+    if (m) { log(m, "good"); resultLines.push({ text: m, bad: false }); resultPage = origPage; renderResultBanner(); save({ quiet: true }); renderAll(); }
+  };
+  const p10MigBase = migrateState;
+  migrateState = function (s) { const r = p10MigBase(s) || s; p10O(r); return r; };
+
+  let p10Sig = "";
+  function p10SigOf(o) { const j = o.job; const ph = j ? (Date.now() < j.t0 + j.tr ? "t" : "w") : "-"; return [o.stage, j ? j.id + j.kind + ph : "", o.req ? o.req.key : "", o.damaged ? 1 : 0, (o.log || []).length, o.log && o.log.length ? o.log[o.log.length - 1].t : 0, OPTIMUS_BATTERY ? Math.floor(o.bat) : 0].join("|"); }
+  function p10Focused() { const a = typeof document !== "undefined" && document.activeElement; return !!(a && /^(INPUT|SELECT|TEXTAREA)$/.test(a.tagName || "")); }
+  function p10Refresh(full) {
+    // Nur auf der Optimus-Seite wird das Blatt neu gezeichnet; sonst nur die rechte Spalte (Kasten + Ressourcen),
+    // damit Links und Eingaben im Blatt nicht unter dem Finger verschwinden.
+    if (full && origPage === "optimus" && !p10Focused()) { renderAll(); return; }
+    if (full) { p10RightOnly = true; try { renderOriginal(); } finally { p10RightOnly = false; } }
+    const el = document.getElementById("p10-box");
+    if (el && el.outerHTML !== undefined && typeof el.insertAdjacentHTML === "function") { el.insertAdjacentHTML("afterend", p10BoxHtml()); el.remove(); }
+    // Handy-Karte im Blatt: nur die Statuszeile ändern – keine Höhenänderung, damit nichts unter dem Finger verrutscht.
+    // Eine neue Anfrage erscheint dort beim nächsten Neuzeichnen; das Abzeichen am Reiter kommt sofort (rechte Spalte).
+    const mb = document.getElementById("p10-mob");
+    const sp = mb && mb.querySelector && mb.querySelector(".p10-mline span");
+    if (sp && state && state.optimus) { const st = p10Status(state.optimus, Date.now()); sp.innerHTML = "<b>Optimus</b> " + origEsc(st.st) + " · " + origEsc(st.job); }
+  }
+  function p10Tick() {
+    const s = state; if (!s || s.dead || p10Pause()) return;
+    const o = p10O(s); const now = Date.now();
+    if (!o.found && s.locId === "schrott") {
+      o.found = true; o.x = 60; o.y = 120;
+      const m = "Im Schrottfeld liegt ein kaputter Roboter: Optimus! Mit Ersatzteilen kannst du ihn reparieren (Seite Optimus).";
+      p10Log(o, m, now); log(m, "good"); showResult(m); save({ quiet: true }); renderAll(); return;
+    }
+    if ((o.stage || 0) < 1) { o.clock = now; return; }
+    if (now - (o.clock || now) > 10 * 60000) { const m = p10CatchUp(s, now); if (m) { log(m, "good"); showResult(m); } save({ quiet: true }); renderAll(); return; } // Seite war eingefroren
+    const before = p10SigOf(o); const lg = o.log.length;
+    p10Advance(s, o, now, null);
+    if (o.req) p10ReqStillOk(s, o);
+    const sig = p10SigOf(o);
+    if (sig !== p10Sig || sig !== before) {
+      const delivered = o.log.length !== lg;
+      if (delivered) save({ quiet: true });
+      p10Sig = sig;
+      p10Refresh(delivered || origPage === "optimus");
+    }
+  }
+  setInterval(p10Tick, 1000);
+  function p10JobPct(o, now) { const j = o.job; if (!j) return 0; const tot = j.tr + j.wk; return tot ? clamp(Math.round((now - j.t0) / tot * 100), 0, 100) : 100; }
+  setInterval(() => {
+    if (!state || !state.optimus || typeof document === "undefined" || !document.querySelectorAll) return;
+    const pct = p10JobPct(state.optimus, Date.now());
+    document.querySelectorAll(".p10-bar > i").forEach((i) => { if (i.style) i.style.width = pct + "%"; });
+  }, 500);
+
+  // ---- Anzeige ----
+  function p10Status(o, now) {
+    if (!o.found && (o.stage || 0) < 1) return { st: "nicht gefunden", job: "Liegt irgendwo im Schrottfeld (60/120)." };
+    if ((o.stage || 0) < 1) return { st: "Wrack", job: "Wartet auf Reparatur (Stufe 1: 3× Servomotor)." };
+    if (o.damaged) return { st: "beschädigt", job: "Beschädigt durch " + o.damaged.cause + " – flicken mit 1 Ersatzteil." };
+    const j = o.job;
+    if (!j) return { st: "wartet", job: "sucht den nächsten Auftrag" };
+    const tgt = p10PlaceName(j.tx, j.ty);
+    if (j.kind === "laden") return { st: now < j.t0 + j.tr ? "läuft" : "lädt", job: "Akku laden – " + tgt };
+    if (j.kind === "ruhe") return { st: "wartet", job: j.why };
+    const what = j.kind === "sammeln" ? "sammelt " + j.res : P10_JOB[j.kind].st;
+    if (now < j.t0 + j.tr) return { st: "läuft", job: "zu " + tgt + " – " + what };
+    const obj = { sammeln: j.res, wasser: "Wasser", nahrung: "Nahrung" }[j.kind];
+    return { st: P10_JOB[j.kind].st.split(" ")[0], job: (obj ? obj + " – " : "") + tgt };
+  }
+  function p10BatText(o) { return OPTIMUS_BATTERY ? "Akku: " + Math.round(o.bat) + " %" : "Akku: deaktiviert (Testmodus)"; }
+  function p10ReqHtml(o, cls) {
+    if (!o.req) return "";
+    return '<div class="p10-req' + (cls ? " " + cls : "") + '"><span>' + origEsc(o.req.text) + '</span> <a href="#" class="p10-btn p10-ok" data-x="p10ok">Bestätigen</a> <a href="#" class="p10-btn p10-no" data-x="p10no">Ablehnen</a></div>';
+  }
+  function p10BoxHtml() {
+    const s = state; if (!s) return "";
+    const o = p10O(s); const now = Date.now(); const st = p10Status(o, now);
+    let h = '<div class="mbox p10-box" id="p10-box" data-req="' + (o.req ? 1 : 0) + '"><h3>Optimus</h3>';
+    h += '<div class="p10-head"><img src="' + P10_IMG + (o.stage >= 5 ? "optimus-klein.png" : "optimus-wrack.png") + '" alt="Optimus" width="40" height="40" />' +
+      '<div><b class="p10-st p10-st-' + origEsc(st.st.replace(/\s.*/, "")) + '">' + origEsc(st.st) + "</b>" + (o.stage >= 1 ? " · Stufe " + p10Lvl(o) : "") +
+      '<div class="p10-job">' + origEsc(st.job) + "</div></div></div>";
+    if (o.stage >= 1) {
+      h += '<div class="p10-bar"><i style="width:' + p10JobPct(o, now) + '%"></i></div>';
+      h += '<div class="p10-small">' + origEsc(p10BatText(o)) + (o.stage >= 1 ? " · Position " + o.x + "/" + o.y : "") + "</div>";
+    }
+    if (o.damaged) h += '<div class="p10-req bad"><span>Optimus ist beschädigt.</span> <a href="#" class="p10-btn" data-x="p10patch">Flicken</a></div>';
+    h += p10ReqHtml(o);
+    if (p10BagN(o)) h += '<div class="p10-small">Tasche: ' + p10BagN(o) + ' Einheiten <a href="#" data-x="p10pick">Ladung abholen</a></div>';
+    const lines = (o.log || []).slice(-4).reverse();
+    if (lines.length) h += '<ul class="p10-log">' + lines.map((l) => "<li><span>" + p10Time(l.t) + "</span> " + origEsc(l.m) + "</li>").join("") + "</ul>";
+    h += '<a class="p10-open" href="#" data-page="optimus">Optimus öffnen&nbsp;›</a></div>';
+    return h;
+  }
+  function p10MobHtml() {
+    const s = state; if (!s) return "";
+    const o = p10O(s); if (!o.found && o.stage < 1) return "";
+    const st = p10Status(o, Date.now());
+    return '<div class="p10-mob m-only" id="p10-mob" data-req="' + (o.req ? 1 : 0) + '"><div class="p10-mline"><img src="' + P10_IMG + "optimus-klein.png" + '" alt="" width="28" height="28" /><span><b>Optimus</b> ' + origEsc(st.st) + " · " + origEsc(st.job) + '</span><a href="#" data-page="optimus" aria-label="Optimus öffnen">›</a></div>' +
+      (o.stage >= 1 ? '<div class="p10-bar"><i style="width:' + p10JobPct(o, Date.now()) + '%"></i></div>' : "") + p10ReqHtml(o, "p10-mreq") +
+      (o.damaged ? '<div class="p10-req bad"><span>Beschädigt.</span> <a href="#" class="p10-btn" data-x="p10patch">Flicken</a></div>' : "") + "</div>";
+  }
+  function p10Icon(img, alt, sz) { return '<img class="p10-ico" src="' + P10_IMG + img + '.png" alt="' + origEsc(alt || "") + '" width="' + (sz || 32) + '" height="' + (sz || 32) + '" />'; }
+  function p10PageHtml() {
+    const s = state; const o = p10O(s); const now = Date.now(); const st = p10Status(o, now); const lvl = p10Lvl(o); const ab = p10Abil(o);
+    let h = '<div class="p10-page"><h2>Optimus – dein Begleitroboter</h2>';
+    h += '<p class="p10-design">DESIGN: Optimus gibt es im Original-Endzeitspiel nicht (Anspielung auf Teslas Optimus). Er ist ein Begleiter wie ein Tier, hat aber einen eigenen Platz – deine Tiere bleiben.</p>';
+    if (OPTIMUS_TEST_GRANT) h += '<p class="p10-test">Testmodus: Jeder Charakter bekommt Optimus sofort voll repariert, ohne Kauf.</p>';
+    if (o.away && now - o.away.at < 30 * 60000) h += '<div class="p10-away"><b>Während du weg warst</b><p>' + origEsc(o.away.text.replace(/^Während du weg warst /, "")) + '</p><a href="#" data-x="p10away">ok</a></div>';
+    h += '<div class="p10-top"><img class="p10-big" src="' + P10_IMG + (o.stage >= 5 ? "optimus.png" : "optimus-wrack.png") + '" alt="Optimus" width="220" height="220" /><div class="p10-stats">';
+    h += '<p class="p10-stline"><b>Status:</b> <span class="p10-st">' + origEsc(st.st) + "</span></p><p>" + origEsc(st.job) + "</p>";
+    if (o.stage >= 1) h += '<div class="p10-bar big"><i style="width:' + p10JobPct(o, now) + '%"></i></div>';
+    if (o.stage >= 1) h += "<p><b>Stufe " + lvl + "</b> · Optimus-EP " + o.oep + (P10_LVL[lvl] != null ? " / " + P10_LVL[lvl] + " bis Stufe " + (lvl + 1) : " (höchste Stufe)") + "</p>";
+    h += "<p>Position: " + (o.stage >= 1 || o.found ? p10PlaceName(o.x, o.y) : "unbekannt") + " · Du bist bei " + origEsc(p10PlaceName(p7Pos(s).x, p7Pos(s).y)) + "</p>";
+    h += "<p>" + origEsc(p10BatText(o)) + (OPTIMUS_BATTERY ? " · Laden: 1 %/Min. unterwegs, 3 %/Min. bei Haus oder Stammlager, 10 %/Min. mit Reaktor" : "") + "</p>";
+    h += "<p>Erledigt: " + (o.stats.jobs || 0) + " Aufträge · " + (o.stats.fled || 0) + "× geflohen · " + (o.stats.parts || 0) + " Ersatzteile gefunden</p>";
+    if (o.damaged) h += '<p class="p10-bad">Beschädigt (' + origEsc(o.damaged.cause) + '). ' + origLink("Flicken (1 Ersatzteil oder 10 Metall)", 'data-x="p10patch"') + "</p>";
+    if (p10BagN(o)) h += "<p>In seiner Tasche: " + origEsc(Object.keys(o.bag).map((k) => o.bag[k] + " " + k).join(", ")) + " " + origLink("Ladung abholen", 'data-x="p10pick"') + "</p>";
+    h += "</div></div>";
+    // Anfrage
+    h += "<h3>Anfragen</h3>" + (o.req ? p10ReqHtml(o, "big") : '<p class="p10-small">' + (ab.mitdenken ? "Keine offene Anfrage. Sobald alles Material für die aktuelle Aufgabe oder dein gewähltes Gebäude da ist, fragt er dich. Ohne deine Bestätigung baut er nichts." : "Anfragen gibt es ab Reparatur-Stufe 5 (Mitdenken).") + "</p>");
+    // Fähigkeiten + Reparatur
+    h += '<h3>Reparatur und Fähigkeiten</h3><table class="p10-tab"><tr><th>Stufe</th><th>Fähigkeit</th><th>Teile (hast / brauchst)</th><th></th></tr>';
+    for (let n = 1; n <= 5; n++) {
+      const sg = P10_STAGES[n]; const done = o.stage >= n;
+      const parts = Object.keys(sg.need).map((k) => '<span class="p10-part">' + p10Icon(P10_PART_INFO[k].img, k, 20) + origEsc(k) + " " + (done ? sg.need[k] + "/" + sg.need[k] : Math.min(s.inv[k] || 0, 999) + "/" + sg.need[k]) + "</span>").join(" ");
+      let act = done ? '<span class="p10-done">✔ erledigt</span>' : (n === o.stage + 1 ? origLink("Stufe " + n + " reparieren", 'data-x="p10rep"') : '<span class="p10-small">erst Stufe ' + (n - 1) + "</span>");
+      h += '<tr class="' + (done ? "done" : "") + '"><td>' + n + "</td><td><b>" + origEsc(sg.l) + "</b><br><span class=\"p10-small\">" + origEsc(sg.d) + "</span></td><td>" + parts + "</td><td>" + act + "</td></tr>";
+    }
+    h += "</table>";
+    if (!o.found && o.stage < 1) h += "<p>Optimus liegt als Wrack im Schrottfeld. " + origLink("hin: Schrottfeld (60/120)", 'data-loc="schrott"') + "</p>";
+    h += '<p class="p10-small">Ersatzteile findest du selten beim Graben, Erkunden, bei der Nahrungssuche, in Höhlen und im Schrottfeld. Optimus findet beim Graben und Erkunden selbst welche (mit Metalldetektor doppelt so oft).</p>';
+    // Kauf
+    h += '<div class="p10-buy"><div><b>Sofort voll reparieren</b><br><span class="p10-small">Ein Klick, alle 5 Stufen fertig. Schon gesammelte Ersatzteile werden zu Optimus-EP (25 je Teil).</span></div>';
+    h += o.stage >= 5 ? '<span class="p10-owned">bereits im Besitz' + (o.owned === "test" ? " (Testmodus)" : "") + "</span>" : '<a href="#" class="p10-btn p10-buybtn" data-x="p10buy">Für 20 € kaufen</a>';
+    h += '<span class="p10-testkauf">Testkauf – kein echtes Geld</span></div>';
+    // Prioritäten
+    h += "<h3>Priorität</h3><p class=\"p10-prios\">" + P10_PRIOS.map(([id, l]) => (o.prio === id ? '<b class="p10-on">' + l + "</b>" : origLink(l, 'data-x="p10prio|' + id + '"'))).join(" · ") + "</p>";
+    h += '<p class="p10-small">' + ({ auto: "Automatisch: zuerst Nahrung und Wasser, wenn dein Vorrat bei 30 oder weniger ist. Dann was die aktuelle Aufgabe und dein gewähltes Gebäude brauchen, dann knappe Rohstoffe.", vorrat: "Vorräte sichern: Nahrung und Wasser bis " + P10_VORRAT + ", danach wie Automatisch.", aufgabe: "Aktuelle Aufgabe: zuerst alles für die offenen Aufgaben.", gebaeude: "Gebäude: zuerst alles für das gewählte Gebäude.", knapp: "Knappe Rohstoffe: füllt, was am wenigsten da ist (Ziel " + P10_SCARCE + " je Rohstoff)." })[o.prio] + "</p>";
+    const td = p10TargetDef(o.target);
+    h += "<p><b>Gewähltes Gebäude:</b> " + (td ? origEsc(td.name) + (p10TargetDone(s, td) ? " (steht schon)" : " – fehlt: " + origEsc(p10MissText(s, td.cost))) + " " + origLink("keins", 'data-x="p10tgt|"') : "keins") + "</p>";
+    const opts = [];
+    HOUSES.forEach((x) => { if (!(s.house && s.house.type === x.id)) opts.push(["house:" + x.id, x.name + (x.tl > (s.techlevel || 0) ? " (TL " + x.tl + ")" : "")]); });
+    if (hasHouse(s) && !s.house.lagerBuilt) opts.push(["lager", "Privatlager"]);
+    BUILDINGS.forEach((b) => { if (!(s.buildings && s.buildings[b.id])) opts.push(["build:" + b.id, b.name]); });
+    h += '<p class="p10-tgts">Wählen: ' + opts.map(([id, l]) => (o.target === id ? "<b>" + origEsc(l) + "</b>" : origLink(l, 'data-x="p10tgt|' + id + '"'))).join(" · ") + "</p>";
+    // Module
+    h += '<h3>Module und Ausrüstung</h3><p class="p10-small">Plätze: ' + (lvl >= 5 ? 2 : 1) + " (ab Stufe 5: 2). Er wählt selbst das beste Modul für den Auftrag.</p><table class=\"p10-tab\">";
+    P10_MODS.forEach((m) => {
+      const un = lvl >= m.lvl; const eq = p10Has(o, m.id);
+      h += '<tr class="' + (eq ? "eq" : un ? "" : "locked") + '"><td>' + p10Icon(m.img, m.n, 32) + "</td><td><b>" + origEsc(m.n) + "</b><br><span class=\"p10-small\">" + origEsc(m.e) + "</span></td><td>" + (eq ? '<span class="p10-done">angelegt</span>' : un ? "frei" : "gesperrt · ab Stufe " + m.lvl) + "</td></tr>";
+    });
+    h += "</table>" + (o.why ? '<p class="p10-why"><b>Warum:</b> ' + origEsc(o.why) + "</p>" : "");
+    // Log
+    h += '<h3>Logbuch</h3><table class="p10-tab p10-logtab">' + (o.log || []).slice().reverse().map((l) => "<tr><td>" + p10Time(l.t) + "</td><td>" + origEsc(l.m) + "</td></tr>").join("") + "</table></div>";
+    return h;
+  }
+  function p10MissText(s, cost) { const m = Object.keys(cost).filter((k) => (k === "gold" ? s.gold : p10Have(s, k)) < cost[k]).map((k) => (cost[k] - (k === "gold" ? s.gold : p10Have(s, k))) + " " + (k === "gold" ? "Gold" : k)); return m.length ? m.join(", ") : "nichts – alles da"; }
+  function p10PartsHtml(full) {
+    const s = state;
+    let h = '<div class="p10-parts"><h3>Optimus-Ersatzteile (DESIGN)</h3><table class="p10-tab">';
+    P10_PARTS.forEach((k) => { h += "<tr><td>" + p10Icon(P10_PART_INFO[k].img, k, 28) + "</td><td><b>" + origEsc(k) + "</b> × " + (s.inv[k] || 0) + "<br><span class=\"p10-small\">" + origEsc(P10_PART_INFO[k].d) + "</span></td></tr>"; });
+    h += "</table><p class=\"p10-small\">" + (full ? "Kann man nicht herstellen. " : "") + "Fundorte: selten beim Graben, Erkunden, bei der Nahrungssuche, in Höhlen und im Schrottfeld. Wofür: Reparatur und Flicken auf der " + origLink("Optimus-Seite", 'data-page="optimus"') + ".</p></div>";
+    return h;
+  }
+  function p10HintHtml() {
+    const o = p10O(); const done = !!o.setup;
+    return '<div class="p10-hint' + (done ? " done" : "") + '"><b>Nebenbei (freiwillig):</b> ' + (done ? "✔ " : "") + 'Optimus einrichten – wähle auf der ' + origLink("Optimus-Seite", 'data-page="optimus"') + " eine Priorität oder ein Gebäude. Zählt nicht für die Kapitel.</div>";
+  }
+  // Menü: „Optimus“ unter Aktionen
+  (function () { const g = ORIG_MENUS.left.find((x) => x[0] === "Aktionen"); if (g && !g[1].some((x) => x[0] === "optimus")) { const i = g[1].findIndex((x) => x[0] === "nahrungssuche"); g[1].splice(i + 1, 0, ["optimus", "Optimus"]); } })();
+  P7_PAGE_NAMES.optimus = "Optimus";
+  const p10PageBase = renderOrigPage;
+  renderOrigPage = function () {
+    let h;
+    if (origPage === "optimus" && state) h = p10PageHtml();
+    else {
+      h = p10PageBase();
+      if (state && origPage === "rucksack") h += p10PartsHtml(false);
+      else if (state && origPage === "herstellen") h += p10PartsHtml(true);
+      else if (state && origPage === "aufgaben") h = h.replace("</h2>", "</h2>" + p10HintHtml());
+    }
+    return (state && origPage !== "optimus" ? p10MobHtml() : "") + h;
+  };
+  const p10ExtBase = extCmd;
+  extCmd = function (cmd) {
+    const bits = String(cmd).split("|"); const c = bits[0];
+    if (/^p10/.test(c) && state && !state.dead) {
+      const o = p10O(); let msg = null, bad = false;
+      if (c === "p10ok") { p10Confirm(); return; }
+      if (c === "p10no") { p10Decline(); return; }
+      if (c === "p10prio") { if (P10_PRIOS.some((x) => x[0] === bits[1])) { o.prio = bits[1]; o.setup = true; if (o.job && o.job.kind !== "laden") { o.job = null; o.clock = Date.now(); } msg = "Optimus-Priorität: " + P10_PRIOS.find((x) => x[0] === bits[1])[1] + "."; p10Log(o, "neue Priorität: " + P10_PRIOS.find((x) => x[0] === bits[1])[1] + ".", Date.now()); } }
+      else if (c === "p10tgt") { const td = p10TargetDef(bits[1]); o.target = td ? bits[1] : null; o.setup = true; if (td && o.prio === "auto") o.prio = "gebaeude"; msg = td ? "Optimus plant jetzt für: " + td.name + "." : "Kein Gebäude gewählt."; p10Log(o, msg, Date.now()); if (o.job && o.job.kind !== "laden") { o.job = null; o.clock = Date.now(); } }
+      else if (c === "p10rep") { msg = p10Repair(); bad = !/repariert/.test(msg); }
+      else if (c === "p10buy") { msg = p10Buy(); }
+      else if (c === "p10patch") { msg = p10Patch(); bad = !/geflickt/.test(msg); }
+      else if (c === "p10pick") { msg = p10Pickup(); }
+      else if (c === "p10away") { o.away = null; }
+      if (msg) { log(msg, bad ? "bad" : "good"); showResult(msg, bad); }
+      save({ quiet: true }); renderAll(); return;
+    }
+    return p10ExtBase(cmd);
   };
 
   document.addEventListener("keydown", (e) => {

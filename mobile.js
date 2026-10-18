@@ -42,6 +42,9 @@
     var loc = right.querySelector("a.loc-link");
     if (loc && loc.children.length >= 2) html = '<span class="ms ms-loc" role="link" tabindex="0" aria-label="Landkarte öffnen"><b>Ort</b>' + loc.children[1].textContent.trim() + "</span>" + html;
     if (html !== lastTop) { top.innerHTML = html; lastTop = html; }
+    // Durchgang 10: Abzeichen am Reiter „Res./Stamm“, wenn Optimus eine Anfrage hat
+    var mb = tabs.querySelector('button[data-mtab="mehr"]');
+    if (mb) mb.classList.toggle("m-badge", !!right.querySelector('.p10-box[data-req="1"]'));
   }
   function setOpen(g) {
     if (g) game.setAttribute("data-mopen", g); else game.removeAttribute("data-mopen");
