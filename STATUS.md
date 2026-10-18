@@ -162,6 +162,19 @@ Live unter **https://unexist2010.github.io/endzeitspiel/** (Repo `unexist2010/en
 - **Tests**: `node tests/smoke-pass7.js` (Node), `node tests/playtest-pass7/p7.js` (Chrome, Desktop + Handy, Screenshots in `tests/playtest-pass7/shots` bzw. `SHOT_DIR`); in `run-all.js` aufgenommen.
 - Version: Service-Worker-Cache `ezs-pwa-6`, `?v=12`.
 
+## Durchgang 8 (18.10.2026)
+
+- **Reisen per Klick**: Koordinaten wie „(77/88)“ in Ergebniszeilen, im Erkunden-/Graben-Verlauf, im Aufgaben-Kasten, auf der Aufgaben-Seite, bei Ereignissen und Länderseiten sind Links („77/88 ➜“). Tooltip: Entfernung, Dauer, Nahrung/Wasser −1, Müdigkeit. Eigener Standort erscheint grün, gesperrte Orte grau. Zähler wie „Im Stall (1 von 25)“ werden nicht verlinkt.
+- **Reisen dauern jetzt wirklich** (vorher sofort): Reisebalken mit der angezeigten Dauer, danach wie gehabt Ankunft, Reise-EP und evtl. Begegnung.
+- **Landkarte**: Feld „Zu Koordinaten reisen“ mit X/Y (Ziffernblock am Handy, 1–200), „Reisen“ zeigt Ziel, Entfernung, Dauer und Kosten, dann „Reise bestätigen“ oder „abbrechen“. Prüft Zahlen, Kartengrenzen, eigenen Standort und gesperrte Orte. Danach steht die Karte auf dem Ziel.
+- **Fähigkeiten-Seite**: Kopf mit Beruf und TL-Fortschrittsbalken; Berufe als Karten je Techlevel (eigener Beruf gold, erlernbar grün mit „erlernen“ und Ausbildungszeit, gesperrt grau mit Grund); Fähigkeiten als Kategorie-Karten mit Stufe, Balken zur nächsten Fähigkeit, ✔/🔒 je Fähigkeit, Wirkung und „so steigt der Wert“. 36 Symbole im Item-Stil (`tools/gen_skill_icons.py`, `assets/skills/`). Beschreibungen/Anforderungen aus dem Wiki (`wiki/text/berufe`).
+- **Tierbilder**: Hund, Esel, Pferd aus dem Wiki-Archiv; Affe, Wolf, Adler sowie Plünderer/Marodeur (vorher Esel/Pferd-Bild) neu gezeichnet (`tools/gen_animal_art.py`). Sichtbar im Tierstall (Galerie aller Tiere, Stallliste, Händlerangebot), in Fang-/Kauf-Ergebnissen und bei Tierkämpfen.
+- **Kapitel 1 (Kunststoff)**: Die Holzhütte braucht laut Wiki 15 Kunststoff, 20 Metall, 20 Nahrung, 5 Wasser, Kapitel 1 lehrte aber nur Holz und Stein. Neu: 1 Holz 40 · 2 Stein 30 · 3 Stock + Stock mit Stein · 4 „Besorge Kunststoff, Metall und Vorräte“ (Schrottfeld 60/120 „Kunststoff/Metall sammeln“, Oase, Notverpflegung, Händler; Zähler „Kunststoff 3/15 · …“) · 5 Holzhütte. Schrottfeld öffnet nach 1–3. Hinweise zeigen „Es fehlt noch: …“.
+- **Weitere Kapitel**: K2 Aufgabe 1 jetzt „einmal handeln“ (Wasser steckt in K1); K3 Aufgabe 4 jetzt „Mutierten Plünderer besiegen“ (Metall steckt in K1); K6/K10 Steinhaus-Hinweise: erst sammeln, dann einreißen (kein Upgrade); K9 Forschen-Hinweis nennt den Ort (Ruinencamp), Forschung-Seite verlinkt die Reise dorthin. Hausbau (DESIGN): der Inhalt des alten Lagers zählt beim Neubau mit – sonst passt das große Steinhaus (1000 Rohstoffe) nicht in den Rucksack (600).
+- **Durchspiel-Test**: `node tests/walk-chapters.js [--seed N]` spielt alle 10 Kapitel als frischer Charakter nur über Links auf den Seiten (virtuelle Uhr, keine Cheats) – grün mit Seeds 7, 1, 2, 3, 42 (ca. 1 780–2 150 Klicks, 112–168 Spielminuten).
+- **Tests**: `node tests/smoke-pass8.js`, `node tests/playtest-pass8/p8.js` (Chrome Desktop 1366 + Handy 412×915, in `run-all.js`). `tests/harness-virt.js` (virtuelle Uhr). Alte Node-Tests laufen mit `EZS_FAST_TRAVEL`.
+- Version: Service-Worker-Cache `ezs-pwa-7`, `?v=13`. Spielstand-Schlüssel bleibt `endzeitspiel_prototype_v3` (kein Save-Break).
+
 ## Speichern & Migration
 
 - Autosave nach Reisen, AGs, Kampf, Craft, Quests, Needs-Tick, Karma-Aktionen.

@@ -178,7 +178,7 @@
     scavenger: {
       id: "scavenger",
       name: "Mutierter Plünderer",
-      img: "assets/gfx/animals/esel.gif",
+      img: "assets/gfx/animals/pluenderer.png", // Durchgang 8: DESIGN-Bild statt Esel
       kp: 22, hp: 14, roundsMax: 6,
       reward: { ep: 3, cp: 2, kep: 2 },
       loot: [
@@ -190,7 +190,7 @@
     raider: {
       id: "raider",
       name: "Marodeur",
-      img: "assets/gfx/animals/pferd.gif",
+      img: "assets/gfx/animals/marodeur.png", // Durchgang 8: DESIGN-Bild statt Pferd
       kp: 30, hp: 18, roundsMax: 7,
       reward: { ep: 4, cp: 2, kep: 3 },
       loot: [
@@ -3150,7 +3150,7 @@
       '<div class="mbox"><h3>Ressourcen</h3>' + res + "</div>" +
       boxes(state.stamm ? ORIG_MENUS.right : [["Stamm", [["gruendung", "Gründung"], ["beitreten", "Beitreten"]]]]);
     const note = (resultLines.length && resultPage === origPage) ? resultLines[resultLines.length - 1] : null;
-    const noteHtml = note ? '<p class="orig-result' + (note.bad ? " bad" : "") + '">' + origEsc(note.text) + "</p>" : "";
+    const noteHtml = note ? '<p class="orig-result' + (note.bad ? " bad" : "") + '">' + p8ResultAnimal(note.text) + p8Coords(origEsc(note.text), origPage) + "</p>" : ""; // Durchgang 8
     sheet.innerHTML = (origPage !== "aufgaben" ? p7GuideMiniHtml() : "") + noteHtml + renderOrigPage();
   }
 
@@ -4215,14 +4215,14 @@
   function travelTo(locId, opts) {
     opts = opts || {};
     if (busy || state.dead) return;
-    if (locId === state.locId) {
+    if (locId === state.locId || p8SameSpot(locId)) {
       if (opts.after) opts.after();
       return;
     }
     const from = locById(state.locId);
-    const to = locById(locId);
+    const to = p8Dest(locId); // Durchgang 8: auch "xy:X,Y" (freies Feld)
     if (!from || !to) return;
-    const gate = placeGate(to);
+    const gate = to.free ? { open: true, text: "" } : placeGate(to);
     if (!gate.open) {
       const msg = to.name + ": " + gate.text + ".";
       log(msg, "bad");
@@ -4245,7 +4245,7 @@
     busy = true;
     setStatus("Unterwegs nach " + to.name + "…");
     const finishTravel = () => {
-      state.locId = locId;
+      state.locId = to.id;
       if (to) { state.px = to.x; state.py = to.y; }
       exert("travel");
       noteTutorial("reise");
@@ -4254,11 +4254,11 @@
         state.food -= need;
         state.water -= need;
         log("Du stehst jetzt in " + to.name + " (" + travelNote + ").", "good");
-        showResult("Du stehst jetzt in " + to.name + ".");
+        showResult("Du stehst jetzt in " + p8ToName(to) + ".");
       } else {
         state.food -= 1; state.water -= 1;
         log("Du stehst jetzt in " + to.name + ".", "good");
-        showResult("Du stehst jetzt in " + to.name + ".");
+        showResult("Du stehst jetzt in " + p8ToName(to) + ".");
       }
       const rep = Math.floor(dist / 10);
       if (rep > 0) { state.ep += rep; log(`Reise-EP (REP): +${rep}.`, "sys"); }
@@ -4278,7 +4278,7 @@
         opts.after();
       }
     };
-    finishTravel();
+    p8TravelRun(to, dist, ms, finishTravel); // Durchgang 8: Reisezeit mit Fortschrittsbalken
   }
 
   function nearestOpenPlace(pred) {
@@ -5005,7 +5005,7 @@
         const cut = Math.min(over, got[item]);
         s.inv[item] -= cut; over -= cut;
       });
-      notes.push("Rucksack voll (" + packLoad(s) + "/" + packCap(s) + "). Ein Esel trägt ca. 7× so viel.");
+      notes.push("Rucksack voll (" + packLoad(s) + " von " + packCap(s) + "). Ein Esel trägt ca. 7× so viel.");
     }
     const f = s.fatigue || 0;
     if (f >= TIRED_FROM && !longSafe && !isInjured(s) && Math.random() < (f - TIRED_FROM + 5) / 100) { // DESIGN 5–25%; lange Arbeit (Mensch/Pilzmix) ohne Verletzung (WIKI)
@@ -5211,9 +5211,9 @@
     Hund: { img: "assets/gfx/animals/hund.gif", skill: "Kampfpunkte in Einzelkämpfen: 12 × Größe (WIKI; Prototyp-KP-Skala 1/100, wie Fahrzeuge)." },
     Esel: { img: "assets/gfx/animals/esel.gif", skill: "Rucksack ca. 7× so groß (WIKI). Im Kampf eher nachteilig (WIKI)." },
     Pferd: { img: "assets/gfx/animals/pferd.gif", skill: "Schneller unterwegs: 2 Felder pro Schritt (DESIGN; Wiki: 10 Felder in 30 Minuten). Gut zum Erkunden." },
-    Affe: { img: null, skill: "Findet mehr Wasser bei der Wassersuche (WIKI; Menge DESIGN)." },
-    Wolf: { img: null, skill: "Bis zu doppelt so viel Fleisch bei der Jagd (WIKI)." },
-    Adler: { img: null, skill: "Warnt vor Angriffen und schätzt die gegnerische Kraft auf 10% genau (WIKI)." },
+    Affe: { img: "assets/gfx/animals/affe.png", /* DESIGN-Bild (Wiki hat keins) */ skill: "Findet mehr Wasser bei der Wassersuche (WIKI; Menge DESIGN)." },
+    Wolf: { img: "assets/gfx/animals/wolf.png", /* DESIGN-Bild */ skill: "Bis zu doppelt so viel Fleisch bei der Jagd (WIKI)." },
+    Adler: { img: "assets/gfx/animals/adler.png", /* DESIGN-Bild */ skill: "Warnt vor Angriffen und schätzt die gegnerische Kraft auf 10% genau (WIKI)." },
   };
   const PET_STALL_EP = 650;   // WIKI
   const PET_MIN_EP = 400;     // WIKI (Handbuch 2006: 600 EP)
@@ -5571,7 +5571,10 @@
   const LAGER_ITEMS = ["Holz", "Stein", "Metall", "Kunststoff", "Sand", "Öl", "Gas", "Benzin", "Erz", "Kristall", "Edelmetall", "Glas", "Nahrung", "Wasser", "Kräuter", "Pilze", "Fell", "Kronkorken", "Schwefel", "Kalisalpeter", "Diamant (weiß)", "Diamant (blau)", "Diamant (grün)", "Diamant (rot)", "Uranoxid"];
   function houseDef(s) { return s.house ? HOUSES.find((h) => h.id === s.house.type) || null : null; }
   function hasHouse(s) { return !!houseDef(s); }
-  function lagerOn(s) { return !!(s.house && s.house.lagerBuilt && s.locId === "camp"); }
+  // Durchgang 8 (DESIGN): Beim Neubau eines Hauses zählt der Inhalt des alten Lagers mit, der noch am Bauplatz liegt.
+  // Sonst passt das große Steinhaus (1000 Rohstoffe) nach dem Einreißen nicht in den Rucksack (600).
+  let houseBuildPay = false;
+  function lagerOn(s) { return !!(s.house && (s.house.lagerBuilt || houseBuildPay) && s.locId === "camp"); }
   function lagerN(s, k) { return (s.house && s.house.lager && s.house.lager[k]) || 0; }
   /** DESIGN: Im Ruinencamp zahlt man aus Rucksack + Privatlager. */
   function haveRes(s, k) { return (s.inv[k] || 0) + (lagerOn(s) ? lagerN(s, k) : 0); }
@@ -5598,7 +5601,8 @@
     if (s.locId !== "camp") return "Bauen geht im Ruinencamp.";
     if (hasHouse(s)) return "Du hast schon ein Haus. Wiki: kein Upgrade, erst einreißen.";
     if ((s.techlevel || 0) < h.tl) return h.name + " braucht Techlevel " + h.tl + " (Wiki).";
-    if (!payCost(s, h.cost)) return "Es fehlt: " + missingText(s, h.cost) + ".";
+    houseBuildPay = true;
+    try { if (!payCost(s, h.cost)) return "Es fehlt: " + missingText(s, h.cost) + "."; } finally { houseBuildPay = false; }
     const old = s.house || {};
     s.house = { type: h.id, lager: old.lager || {}, lagerBuilt: false, chemie: false };
     exert("craft"); gain(s, 2, 1);
@@ -5609,7 +5613,7 @@
     if (!h) return "Du hast kein Haus.";
     if (s.locId !== "camp") return "Einreißen geht im Ruinencamp.";
     s.house = { type: null, lager: s.house.lager || {}, lagerBuilt: false, chemie: false };
-    return h.name + " eingerissen. Lager und Chemieküche sind weg (Wiki). Der Inhalt bleibt liegen, bis du ein neues Lager baust (DESIGN).";
+    return h.name + " eingerissen. Lager und Chemieküche sind weg (Wiki). Der Inhalt bleibt liegen: Er zählt beim Bau des neuen Hauses mit und ist wieder zugänglich, wenn du ein neues Lager baust (DESIGN).";
   }
   function buildLager() {
     const s = state;
@@ -6389,11 +6393,11 @@
   }
   function stallListHtml() {
     const s = state; const list = s.stallPets || [];
-    let h = "<h3>Im Stall (" + allPets(s).length + "/" + STALL_MAX + ")</h3>";
+    let h = "<h3>Im Stall (" + allPets(s).length + " von " + STALL_MAX + ")</h3>";
     if (!s.stamm) return h + "<p class=\"muted\">Mehrere Tiere gehen nur mit Stamm. Der Tierstall ist ein Stammgebäude (Wiki).</p>";
     if (!list.length) return h + "<p class=\"muted\">Kein weiteres Tier im Stall.</p>";
     list.forEach((p, i) => {
-      h += "<p>" + origEsc(p.name) + " (" + p.type + (p.psi ? ", PSI" : "") + ") · Hunger " + p.hunger + "% · Durst " + p.durst + "% · " +
+      h += '<p class="p8-stall">' + p8AniImg(p.type, "s") + origEsc(p.name) + " (" + p.type + (p.psi ? ", PSI" : "") + ") · Hunger " + p.hunger + "% · Durst " + p.durst + "% · " +
         xLink("versorgen", "stallfeed|" + i) + " · " + xLink("an deine Seite holen", "petswap|" + i) + " · " + xLink("freilassen", "stallfree|" + i) + "</p>";
     });
     return h;
@@ -6426,10 +6430,12 @@
     } else {
       out += "<p>Du hast kein Haus. Wiki: Ein Haus ist für die Stammesgründung nötig.</p>";
       HOUSES.forEach((x) => {
-        const ok = (s.techlevel || 0) >= x.tl && canPay(s, x.cost);
+        houseBuildPay = true; const ok = (s.techlevel || 0) >= x.tl && canPay(s, x.cost); const miss = missingText(s, x.cost); houseBuildPay = false;
         out += "<p><b>" + origEsc(x.name) + "</b> (TL " + x.tl + ", Lager " + x.lager.toLocaleString("de-AT") + " je Rohstoff) — " + costLine(x.cost) + " " +
-          (ok ? xLink("bauen", "house|" + x.id) : '<span class="cant">bauen</span>') + "</p>";
+          (ok ? xLink("bauen", "house|" + x.id) : '<span class="cant">bauen</span>' + ((s.techlevel || 0) >= x.tl && miss ? ' <span class="muted">(es fehlt: ' + origEsc(miss) + ")</span>" : "")) + "</p>";
       });
+      const left = s.house && s.house.lager ? Object.keys(s.house.lager).filter((k) => s.house.lager[k] > 0) : [];
+      if (left.length) out += "<p class=\"muted\">Dein altes Lager liegt noch am Bauplatz (" + origEsc(left.map((k) => s.house.lager[k] + " " + k).join(", ")) + "). Beim Bau des neuen Hauses zählt es mit (DESIGN).</p>";
     }
     if (lagerOn(s)) {
       out += "<h3>Privatlager</h3><table>";
@@ -7214,7 +7220,7 @@
       if (st.rl >= RL_MAX) return { ok: false, msg: "Höchster Researchlevel " + RL_MAX + " erreicht." };
       const pts = 3 + (s.attrs.Intelligenz || 0); // DESIGN
       st.rp += pts; gain(s, 2, 2);
-      let msg = "Forschung: +" + pts + " Researchpunkte (" + st.rp + "/" + rlNeed(st.rl) + ").";
+      let msg = "Forschung: +" + pts + " Researchpunkte (" + st.rp + " von " + rlNeed(st.rl) + ").";
       while (st.rp >= rlNeed(st.rl) && st.rl < RL_MAX) { st.rp -= rlNeed(st.rl); st.rl += 1; msg += " Researchlevel " + st.rl + "!"; }
       return { ok: true, msg };
     },
@@ -7224,7 +7230,7 @@
     if (!st || !st.geb.forschungsgeb) return "Erst ein Forschungsgebäude im Stamm (Wiki).";
     if ((s.inv.Forschungspunkt || 0) < n) return "Du hast nur " + (s.inv.Forschungspunkt || 0) + " Forschungspunkt(e).";
     takeInv(s, "Forschungspunkt", n); st.rp += n; // DESIGN 1:1
-    let msg = n + " Forschungspunkt(e) eingebracht (" + st.rp + "/" + rlNeed(st.rl) + ").";
+    let msg = n + " Forschungspunkt(e) eingebracht (" + st.rp + " von " + rlNeed(st.rl) + ").";
     while (st.rp >= rlNeed(st.rl) && st.rl < RL_MAX) { st.rp -= rlNeed(st.rl); st.rl += 1; msg += " Researchlevel " + st.rl + "!"; }
     return msg;
   }
@@ -7273,7 +7279,7 @@
       const k = Math.min(n, s.inv[res] || 0, room);
       if (k <= 0) return room <= 0 ? "Der Tank ist voll." : "Kein " + res + " im Rucksack.";
       takeInv(s, res, k); st.tank[res] += k;
-      return k + " " + res + " in den Tank (" + st.tank[res] + "/" + tankCap(s, res) + ").";
+      return k + " " + res + " in den Tank (" + st.tank[res] + " von " + tankCap(s, res) + ").";
     }
     const k = Math.min(n, st.tank[res]);
     if (k <= 0) return "Der Tank ist leer.";
@@ -7366,7 +7372,7 @@
     let h = "<h2>Forschung</h2><p class=\"muted\">Wiki: Forschungsgrundstück → Researchlevel 1, Forschungsgebäude → 2, danach steigern Forscher den Researchlevel durch Arbeit im Gebäude. Punkte je Stufe (15 × nächste Stufe) und je Arbeit (3 + Intelligenz) sind DESIGN. Forschungspunkte aus dem Rucksack zählen 1:1 (DESIGN).</p>";
     h += "<table><tr><td>Researchlevel:</td><td><b>" + st.rl + "</b> / " + RL_MAX + "</td></tr><tr><td>Punkte:</td><td>" + st.rp + " / " + rlNeed(st.rl) + "</td></tr></table>";
     if (st.geb.forschungsgeb) {
-      h += "<p>" + (s.job === "Forscher" ? xLink("forschen (ein Arbeitsgang)", "work|forschung_stamm") + " · lange Arbeit unter " + origLink("Arbeiten", 'data-page="arbeiten"') : "Nur Forscher arbeiten im Forschungsgebäude.") + "</p>";
+      h += "<p>" + (s.job === "Forscher" && s.locId !== "camp" ? "Das Forschungsgebäude steht im Ruinencamp. Erst " + origLink("ins Ruinencamp reisen", 'data-loc="camp"') + ", dann forschen." : s.job === "Forscher" ? xLink("forschen (ein Arbeitsgang)", "work|forschung_stamm") + " · lange Arbeit unter " + origLink("Arbeiten", 'data-page="arbeiten"') : "Nur Forscher arbeiten im Forschungsgebäude.") + "</p>";
       if (s.inv.Forschungspunkt) h += "<p>Forschungspunkte im Rucksack: " + s.inv.Forschungspunkt + " " + xLink("1 einbringen", "rpin|1") + " · " + xLink("alle einbringen", "rpin|" + s.inv.Forschungspunkt) + "</p>";
     } else h += "<p>Erst Forschungsgrundstück und Forschungsgebäude bauen: " + origLink("Stammgebäude", 'data-page="stammgeb"') + "</p>";
     h += "<h3>Was schaltet welcher Level frei?</h3><table>";
@@ -7989,7 +7995,7 @@
       gain(s, 2, 2);
       if (Math.random() >= p5BioChance(s)) return { ok: true, msg: "Biolabor: Versuch misslungen (Erfolgschance " + Math.round(p5BioChance(s) * 100) + "%, Wiki höchstens 80%)." };
       const pts = 3 + (s.attrs.Intelligenz || 0); st.bp += pts; addInv(s, "Bio-Serum", 1);
-      let msg = "Biolabor: Erfolg! +" + pts + " Biopunkte (" + st.bp + "/" + rlNeed(st.bl) + "), +1 Bio-Serum.";
+      let msg = "Biolabor: Erfolg! +" + pts + " Biopunkte (" + st.bp + " von " + rlNeed(st.bl) + "), +1 Bio-Serum.";
       while (st.bl < BL_MAX && st.bp >= rlNeed(st.bl)) { st.bp -= rlNeed(st.bl); st.bl += 1; msg += " Biolevel " + st.bl + "!"; }
       return { ok: true, msg };
     },
@@ -8551,6 +8557,7 @@
   const p7ExertBase = exert;
   exert = function (kind) {
     if (!state) return p7ExertBase(kind);
+    if (kind === "trade") p7Count("trade"); // Durchgang 8: Aufgabe „Handeln“
     const f0 = state.fatigue || 0, e0 = curEnergy(state);
     const r = p7ExertBase(kind);
     const f1 = state.fatigue || 0, e1 = curEnergy(state);
@@ -8610,12 +8617,13 @@
     { t: "Erste Schritte im Ruinencamp", tasks: [
       { id: "k1_holz", l: "Sammle 40 Holz", g: { t: "inv", k: "Holz", n: 40 }, h: "Im Waldstück (70/90) unter Arbeiten „Holz sammeln“. Jeder Gang bringt Holz.", loc: "wald", page: "arbeiten" },
       { id: "k1_stein", l: "Sammle 30 Stein", g: { t: "inv", k: "Stein", n: 30 }, h: "Im Steinbruch (85/110) unter Arbeiten „Stein abbauen“.", loc: "bruch", page: "arbeiten" },
-      { id: "k1_stock", l: "Stelle einen Stock her", g: { t: "craft", id: "stock" }, h: "Herstellen → Stock (10 Holz). Eine erste Waffe: +8 Kampfpunkte.", page: "herstellen" },
-      { id: "k1_steinstock", l: "Stelle einen Stock mit Stein her", g: { t: "craft", id: "stock_stein" }, h: "Herstellen → Stock mit Stein (10 Holz, 10 Stein). +16 Kampfpunkte.", page: "herstellen" },
-      { id: "k1_huette", l: "Baue eine Holzhütte", g: { t: "house", id: "holzhuette" }, h: "Haus → Holzhütte: 25 Holz, 15 Kunststoff, 20 Metall, 20 Nahrung, 5 Wasser. Metall und Kunststoff gibt es auf dem Schrottfeld (60/120) – es öffnet sich, sobald die ersten vier Aufgaben erledigt sind. Nahrung: Notverpflegung herstellen (3 Holz + 2 Wasser) oder Wilde Hunde jagen. Wasser: Wassersuche in der Oase.", loc: "schrott", page: "haus" },
+      { id: "k1_waffen", l: "Stelle einen Stock und einen Stock mit Stein her", g: { t: "crafts", ids: ["stock", "stock_stein"] }, h: "Herstellen → Stock (10 Holz, +8 Kampfpunkte), danach Stock mit Stein (10 Holz, 10 Stein, +16 Kampfpunkte). Danach öffnet sich das Schrottfeld.", page: "herstellen" },
+      // Durchgang 8: Die Holzhütte braucht Kunststoff, Metall, Nahrung und Wasser. Vorher lernte Kapitel 1 nur Holz und Stein → Spieler steckten fest.
+      { id: "k1_vorrat", l: "Besorge Kunststoff, Metall und Vorräte für die Hütte", g: { t: "need", cost: { Kunststoff: 15, Metall: 20, Nahrung: 20, Wasser: 5 } }, h: "Kunststoff und Metall gibt es nicht im Wald oder Steinbruch, sondern auf dem Schrottfeld (60/120): dort unter Arbeiten „Kunststoff sammeln“ und „Metall sammeln“ (je 4–10 pro Gang). Das Schrottfeld öffnet sich, sobald die Aufgaben 1–3 erledigt sind. Wasser: in der Oase (40/95) „Wasser suchen“. Nahrung: Wilde Hunde im Waldstück (70/90) jagen oder Herstellen → Notverpflegung (3 Holz + 2 Wasser = 1 Nahrung). Notfalls beim Händler im Ruinencamp: Kunststoff 2 Gold, Nahrung 3 Gold.", loc: "schrott", page: "arbeiten" },
+      { id: "k1_huette", l: "Baue eine Holzhütte", g: { t: "house", id: "holzhuette" }, h: "Im Ruinencamp (50/100): Haus → Holzhütte „bauen“. Kosten 25 Holz, 15 Kunststoff, 20 Metall, 20 Nahrung, 5 Wasser. Iss vorher nicht die Nahrung für die Hütte auf.", loc: "camp", page: "haus", cost: { Holz: 25, Kunststoff: 15, Metall: 20, Nahrung: 20, Wasser: 5 } },
     ] },
     { t: "Versorgung und erster Kampf", tasks: [
-      { id: "k2_wasser", l: "Reise zur Oase und suche Wasser", g: { t: "act", a: "wasser", at: "oase", n: 1 }, h: "Die Oase liegt bei 40/95. Dort „Wasser suchen“.", loc: "oase", page: "wassersuche" },
+      { id: "k2_handel", l: "Handle einmal beim Händler im Ruinencamp", g: { t: "cnt", k: "trade", n: 1 }, h: "Im Ruinencamp (50/100) unter Handeln etwas kaufen oder verkaufen. Der Händler kauft Rohstoffe an und verkauft Nahrung, Wasser, Kunststoff und Metall.", loc: "camp", page: "handeln" },
       { id: "k2_essen", l: "Iss oder trink etwas aus dem Rucksack", g: { t: "cnt", k: "eat", n: 1 }, h: "Rucksack → Essen und Trinken. Füllt den Bedarf (rechts: Nahrung/Wasser).", page: "rucksack" },
       { id: "k2_hund", l: "Besiege einen Wilden Hund", g: { t: "kill", e: "wild_dog", n: 1 }, h: "Jagen oder Kämpfen. Wilde Hunde gibt es z. B. im Waldstück. Mit Stock mit Stein kämpfst du besser.", page: "jagen" },
       { id: "k2_schlaf", l: "Schlafe dich einmal aus", g: { t: "cnt", k: "sleep", n: 1 }, h: "Schlafen senkt Müdigkeit und füllt Energie. Im eigenen Haus schläfst du am sichersten.", page: "schlafen" },
@@ -8625,7 +8633,7 @@
       { id: "k3_graben", l: "Grabe 3×", g: { t: "act", a: "graben", n: 3 }, h: "Graben geht überall außer im Ruinencamp. Wahrnehmung erhöht die Fundchance.", page: "graben" },
       { id: "k3_erkunden", l: "Erkunde 5×", g: { t: "cnt", k: "erk", n: 5 }, h: "Erkunden findet Kleinigkeiten, Spuren und neue Orte in der Nähe.", page: "erkunden" },
       { id: "k3_cp", l: "Verteile 3 Charakterpunkte", g: { t: "cpSpent", n: 3 }, h: "Status → bei einer Eigenschaft „Go!“. Was jede Eigenschaft bewirkt, steht dort.", page: "status" },
-      { id: "k3_metall", l: "Reise zum Schrottfeld und sammle 3× Metall", g: { t: "act", a: "metall", at: "schrott", n: 3 }, h: "Schrottfeld (60/120), Arbeiten → „Arbeiten hier“ → Metall sammeln.", loc: "schrott", page: "arbeiten" },
+      { id: "k3_pluenderer", l: "Besiege einen Mutierten Plünderer", g: { t: "kill", e: "scavenger", n: 1 }, h: "Plünderer streifen über das Schrottfeld (60/120): dort Kämpfen. Sie sind stärker als Hunde (22 KP) – mit Stock mit Stein und ausgeschlafen klappt es meist.", loc: "schrott", page: "kaempfen" },
       { id: "k3_tl1", l: "Erreiche Techlevel 1 (100 EP)", g: { t: "tl", n: 1 }, h: "EP gibt es für Arbeit, Kämpfe, Quests und Aufgaben. Ab 100 EP öffnen sich Höhlen, Sandwüste, Öl- und Gasfeld.", page: "status" },
     ] },
     { t: "Die Anfängerhöhlen", tasks: [
@@ -8647,7 +8655,7 @@
       { id: "k6_einlagern", l: "Lagere 50 Holz im Privatlager ein", g: { t: "lagerN", k: "Holz", n: 50 }, h: "Haus → Lager → Holz einlagern. Was im Lager liegt, zählt im Ruinencamp beim Bauen mit.", loc: "camp", page: "haus" },
       { id: "k6_notverpf", l: "Stelle eine Notverpflegung her", g: { t: "craft", id: "notverpflegung" }, h: "Herstellen → Notverpflegung (3 Holz, 2 Wasser) gibt 1 Nahrung.", page: "herstellen" },
       { id: "k6_tl2", l: "Erreiche Techlevel 2 (250 EP)", g: { t: "tl", n: 2 }, h: "Ab TL2: Erzader, Glasschmelze, Kräuterfeld und die Spitzhacke.", page: "status" },
-      { id: "k6_steinhaus", l: "Baue ein kleines Steinhaus", g: { t: "house", id: "steinhaus_k" }, h: "Haus → kleines Steinhaus: 120 Holz, 25 Kunststoff, 100 Stein, 45 Metall, 40 Nahrung, 5 Wasser. Lager 10.000 je Rohstoff.", loc: "camp", page: "haus" },
+      { id: "k6_steinhaus", l: "Baue ein kleines Steinhaus", g: { t: "house", id: "steinhaus_k" }, h: "Haus → kleines Steinhaus: 120 Holz, 25 Kunststoff, 100 Stein, 45 Metall, 40 Nahrung, 5 Wasser. Lager 10.000 je Rohstoff. Wiki: kein Upgrade — sammle zuerst alles (gern im Privatlager), dann Haus → „Haus einreißen“ und neu bauen. Der Lagerinhalt zählt beim Neubau mit, das Lager selbst baust du danach neu.", cost: { Holz: 120, Kunststoff: 25, Stein: 100, Metall: 45, Nahrung: 40, Wasser: 5 }, loc: "camp", page: "haus" },
     ] },
     { t: "Werkzeug und Bodenschätze", tasks: [
       { id: "k7_hacke", l: "Stelle eine Spitzhacke her", g: { t: "craft", id: "spitzhacke" }, h: "Herstellen → Spitzhacke (10 Holz, 15 Metall, TL2). Damit gräbst du auf hartem Boden.", page: "herstellen" },
@@ -8667,7 +8675,7 @@
       { id: "k9_geb", l: "Baue das Forschungsgebäude", g: { t: "sgeb", id: "forschungsgeb" }, h: "Stammgebäude → Forschungsgebäude (50 Holz, 20 Kunststoff, 30 Stein, 2 Sand). Researchlevel 2.", page: "stammgeb" },
       { id: "k9_tl4", l: "Erreiche Techlevel 4 (550 EP)", g: { t: "tl", n: 4 }, h: "Ab TL4: Forscher, Uransammler, Tierfänger.", page: "status" },
       { id: "k9_forscher", l: "Lerne den Beruf Forscher", g: { t: "job", list: ["Forscher"] }, h: "Fähigkeiten → TL 4 → Forscher. Nur Forscher arbeiten im Forschungsgebäude (Wiki).", page: "faehigkeiten" },
-      { id: "k9_forschen", l: "Forsche 3× im Forschungsgebäude", g: { t: "act", a: "forschung_stamm", n: 3 }, h: "Stamm → Forschung → „forschen“. Jeder Gang: 3 + Intelligenz Researchpunkte.", page: "forschung" },
+      { id: "k9_forschen", l: "Forsche 3× im Forschungsgebäude", g: { t: "act", a: "forschung_stamm", n: 3 }, loc: "camp", h: "Im Ruinencamp (dort steht das Forschungsgebäude): Stamm → Forschung → „forschen“. Jeder Gang: 3 + Intelligenz Researchpunkte.", page: "forschung" },
       { id: "k9_rl3", l: "Bringe den Stamm auf Researchlevel 3", g: { t: "rl", n: 3 }, h: "Weiter forschen. Researchlevel 3 öffnet Kunststoffschmelze und Erzverarbeitung.", page: "forschung" },
     ] },
     { t: "Veteran der Endzeit", tasks: [
@@ -8675,7 +8683,7 @@
       { id: "k10_siege", l: "Gewinne insgesamt 20 Kämpfe", g: { t: "kill", n: 20 }, h: "Rivalenlager, Höhlen, Tiergebiet.", page: "kaempfen" },
       { id: "k10_schmelze", l: "Baue die Kunststoffschmelze", g: { t: "sgeb", id: "kunststoffschmelze" }, h: "Stammgebäude → Kunststoffschmelze (30 Holz, 40 Stein, 80 Metall, 1 Sand; Researchlevel 3, Intelligenz 3).", page: "stammgeb" },
       { id: "k10_tl5", l: "Erreiche Techlevel 5 (700 EP)", g: { t: "tl", n: 5 }, h: "Ab TL5: Pilzsammler, Gärtner, Mechaniker.", page: "status" },
-      { id: "k10_grosshaus", l: "Baue ein großes Steinhaus", g: { t: "house", id: "steinhaus_g" }, h: "Haus → großes Steinhaus: 500 Holz, 100 Kunststoff, 200 Stein, 80 Metall, 100 Nahrung, 20 Wasser.", loc: "camp", page: "haus" },
+      { id: "k10_grosshaus", l: "Baue ein großes Steinhaus", g: { t: "house", id: "steinhaus_g" }, h: "Haus → großes Steinhaus: 500 Holz, 100 Kunststoff, 200 Stein, 80 Metall, 100 Nahrung, 20 Wasser. Das sind mehr als in den Rucksack passen: erst im Privatlager sammeln, dann Haus → „Haus einreißen“ und neu bauen (Lagerinhalt zählt mit).", cost: { Holz: 500, Kunststoff: 100, Stein: 200, Metall: 80, Nahrung: 100, Wasser: 20 }, loc: "camp", page: "haus" },
     ] },
   ];
   // Belohnungen (DESIGN): je Aufgabe EP und Gold, je Kapitel zusätzlich CP.
@@ -8688,6 +8696,8 @@
     const p = p7(s); const gd = s.guide || {};
     switch (g.t) {
       case "inv": return [Math.max(0, s.inv[g.k] || 0), g.n];
+      case "crafts": return [g.ids.filter((id) => p7Progress(s, { t: "craft", id })[0] >= 1).length, g.ids.length];
+      case "need": { const ks = Object.keys(g.cost); return [ks.filter((k) => (s.inv[k] || 0) >= g.cost[k]).length, ks.length]; }
       case "craft": { const c = CRAFTS.find((x) => x.id === g.id); const made = p.crafted[g.id] || 0; const owns = g.id !== "notverpflegung" && c && Object.keys(c.result).some((k) => (s.inv[k] || 0) > 0); return [made > 0 || owns ? 1 : 0, 1]; }
       case "house": return [p7HouseRank(s) >= HOUSES.findIndex((h) => h.id === g.id) ? 1 : 0, 1];
       case "lager": return [s.house && s.house.lagerBuilt ? 1 : 0, 1];
@@ -8714,6 +8724,8 @@
   function p7Met(s, g) { const pr = p7Progress(s, g); return pr[0] >= pr[1]; }
   function p7ProgText(s, task) {
     const g = task.g; const pr = p7Progress(s, g);
+    if (g.t === "need") { const miss = Object.keys(g.cost).filter((k) => (s.inv[k] || 0) < g.cost[k]).map((k) => k + " " + (s.inv[k] || 0) + "/" + g.cost[k]); return miss.length ? miss.join(" · ") : "alles beisammen"; }
+    if (g.t === "crafts") return pr[0] + "/" + pr[1] + " hergestellt";
     if (pr[1] <= 1) return pr[0] >= 1 ? "erledigt" : "offen";
     const unit = g.t === "inv" || g.t === "lagerN" ? " " + g.k : g.t === "gold" ? " Gold" : g.t === "kill" ? " Siege" : g.t === "cost" ? " Posten" : g.t === "rep" ? " REP" : g.t === "tl" ? " TL" : g.t === "rl" ? " RL" : "";
     return Math.min(pr[0], pr[1]) + "/" + pr[1] + unit;
@@ -8760,7 +8772,7 @@
         }
       });
       const ready = firstFour.every((t) => g.done[t.id]);
-      if (ci === 0 && ready) p7UnlockSchrott(s);
+      if (ci === 0 && ch.tasks.slice(0, 3).every((t) => g.done[t.id])) p7UnlockSchrott(s); // Durchgang 8: schon nach Aufgabe 1–3
       const fin = ch.tasks[4];
       if (ready && !g.done[fin.id] && p7Met(s, fin.g)) {
         g.done[fin.id] = 1; g.chDone[ci] = 1; g.ch = ci + 1; changed = true;
@@ -8803,7 +8815,7 @@
     });
     h += "</ul>";
     if (g.last && Date.now() - g.last.at < 15000) h += '<p class="p7-new">' + origEsc(g.last.text) + "</p>";
-    h += '<p class="p7-hint">' + origEsc(cur.task.h) + "</p>" + p7TaskLinks(cur.task) + '<a class="p7-all" href="#" data-page="aufgaben">Alle Aufgaben</a></div>';
+    h += '<p class="p7-hint">' + origEsc(p8HintText(cur.task)) + "</p>" + p7TaskLinks(cur.task) + '<a class="p7-all" href="#" data-page="aufgaben">Alle Aufgaben</a></div>';
     return h;
   }
   function p7GuideMiniHtml() {
@@ -8831,7 +8843,7 @@
         const td = !!g.done[t.id]; const tr = p7TaskReward(ci);
         h += '<li class="' + (td ? "done" : (i === 4 && !ready) || future ? "locked" : "") + '"><b>' + (td ? "✔ " : "") + origEsc(t.l) + "</b>" +
           (td ? "" : ' <span class="p7-prog">' + origEsc(p7ProgText(s, t)) + "</span>") +
-          '<br><span class="muted">' + origEsc(t.h) + "</span>" + (!td && !future ? "<br>" + p7TaskLinks(t) : "") +
+          '<br><span class="muted">' + origEsc(td ? t.h : p8HintText(t)) + "</span>" + (!td && !future ? "<br>" + p7TaskLinks(t) : "") +
           ' <span class="p7-small">Belohnung: +' + tr.ep + " EP, +" + tr.gold + " Gold</span></li>";
       });
       h += '</ol><p class="p7-small">Kapitelbelohnung: +' + r.ep + " EP, +" + r.gold + " Gold, +" + r.cp + " CP</p></details>";
@@ -8953,7 +8965,7 @@
   function p7HistTable(list) {
     if (!list.length) return '<p class="muted">Noch keine Einträge.</p>';
     return '<table class="p7-hist"><tr><th>Zeit</th><th>Feld</th><th>Ergebnis</th><th>Kosten</th></tr>' + list.map((e) =>
-      "<tr><td>" + p7Time(e.t) + "</td><td>" + origEsc(e.f + " " + e.x + "/" + e.y) + "</td><td>" + origEsc(e.r) + "</td><td>" + origEsc(e.c) + "</td></tr>").join("") + "</table>";
+      "<tr><td>" + p7Time(e.t) + "</td><td>" + origEsc(e.f) + " " + p8XYLink(e.x, e.y, origPage) + "</td><td>" + p8Coords(origEsc(e.r), origPage) + "</td><td>" + origEsc(e.c) + "</td></tr>").join("") + "</table>";
   }
   function p7ErkundenPage() {
     const s = state; const p = p7(s); const ch = p7ErkChances(s);
@@ -9218,6 +9230,262 @@
     return p7RenderAllBase.apply(this, arguments);
   };
   window.__p7 = { GUIDE, tick: () => p7GuideTick(), cur: () => state && p7Current(state), loc: () => state && p7LocText(state) };
+
+  // =====================================================================
+  // ---------- Durchgang 8 (Okt 2026) ----------
+  // Reisezeit mit Balken, Koordinaten überall anklickbar (hinreisen), Landkarte X/Y-Eingabe,
+  // Fähigkeiten als Karten mit Symbolen, Tierbilder, Kapitel-1-Hinweise.
+  // =====================================================================
+  let travelUi = null; let travelTimer = null;
+  /** "xy:X,Y" → Ort auf dem Feld oder freies Feld */
+  function p8Dest(id) {
+    const m = /^xy:(\d+),(\d+)$/.exec(String(id || ""));
+    if (!m) return locById(id);
+    const x = +m[1], y = +m[2];
+    return placeAt(x, y) || fieldLoc(x, y);
+  }
+  function p8SameSpot(id) {
+    const m = /^xy:(\d+),(\d+)$/.exec(String(id || ""));
+    return !!(m && state && +m[1] === state.px && +m[2] === state.py);
+  }
+  function p8ToName(to) { return to && to.free ? p7FieldName(to.x, to.y) + " (" + to.x + "/" + to.y + ")" : (to ? to.name : ""); }
+  /** DESIGN: Reisen dauert die geplante Zeit (800 ms + 120 ms je Feld, max. 8 s; Geschwindigkeit/Fahrzeug kürzen) mit Balken.
+   *  Vorher war die Reise sofort fertig, die angezeigten Sekunden galten nicht. Schalter EZS_FAST_TRAVEL nur für alte Node-Tests. */
+  function p8TravelRun(to, dist, ms, finish) {
+    if (window.EZS_FAST_TRAVEL || !(ms > 0)) { finish(); return; }
+    travelUi = { to: p8ToName(to), dist, ms, start: Date.now(), pct: 0 };
+    setStatus("Unterwegs nach " + travelUi.to + "…");
+    renderAll();
+    if (travelTimer) clearInterval(travelTimer);
+    travelTimer = setInterval(() => {
+      if (!travelUi) { clearInterval(travelTimer); travelTimer = null; return; }
+      const p = Math.min(1, (Date.now() - travelUi.start) / travelUi.ms);
+      travelUi.pct = p * 100;
+      const el = document.querySelector("#orig-sheet .travel-bar i");
+      if (el) el.style.width = travelUi.pct + "%";
+      setProgress(travelUi.pct);
+      if (p >= 1) { clearInterval(travelTimer); travelTimer = null; travelUi = null; finish(); }
+    }, 100);
+  }
+  function p8TravelBoxHtml() {
+    if (!travelUi) return "";
+    return '<div class="work-row p8-travel"><p>Unterwegs nach <b>' + origEsc(travelUi.to) + "</b> · " + travelUi.dist + " Felder · " + Math.max(1, Math.round(travelUi.ms / 1000)) + ' s</p><div class="work-bar travel-bar"><i style="width:' + Math.round(travelUi.pct) + '%"></i></div></div>';
+  }
+  /** Kosten einer Reise zu x/y (wie travelTo: Plan + Bedarf + Müdigkeit) */
+  function p8TravelCost(x, y) {
+    if (!state) return "";
+    const from = locById(state.locId) || { x: state.px, y: state.py };
+    const plan = travelPlan(from, { x, y });
+    return plan.dist + " Felder · " + plan.sec + " s · Nahrung −1 · Wasser −1 · Müdigkeit +" + p7FatAdd("travel");
+  }
+  /** Anklickbare Koordinate: Klick reist hin (normale Reise). Kosten im Tooltip. */
+  function p8XYLink(x, y, back, label) {
+    label = label || x + "/" + y;
+    if (!state) return label;
+    if (x === state.px && y === state.py) return '<span class="p8-here" title="Hier bist du">' + label + "</span>";
+    const pl = placeAt(x, y); const g = pl ? placeGate(pl) : { open: true };
+    if (!g.open) return '<span class="p8-lock" title="' + origEsc(pl.name + ": " + g.text) + '">' + label + " (gesperrt)</span>";
+    return '<a href="#" class="p8-go" data-x="p8go|' + x + "|" + y + "|" + (back || origPage) + '" title="Hinreisen: ' + origEsc(p8TravelCost(x, y)) + '">' + label + "</a>";
+  }
+  /** Macht „(x/y)“ und „(x / y,“ im Text zu Reise-Links. Tags und bestehende Links bleiben unberührt. */
+  function p8Coords(html, back) {
+    if (!state || !html) return html;
+    return String(html).split(/(<a\b[\s\S]*?<\/a>|<textarea\b[\s\S]*?<\/textarea>|<[^>]+>)/).map((part) => {
+      if (!part || part[0] === "<") return part;
+      return part.replace(/\((\d{1,3}) ?\/ ?(\d{1,3})(\)|,)/g, (m, xs, ys, end) => {
+        const x = +xs, y = +ys;
+        if (x < 1 || x > 200 || y < 1 || y > 200) return m;
+        return "(" + p8XYLink(x, y, back) + end;
+      });
+    }).join("");
+  }
+  function p8Go(x, y, back) {
+    const s = state;
+    if (!s || s.dead) return;
+    if (sleepUi) { showResult(SLEEP_MSG, true); renderAll(); return; }
+    if (busy) { showResult("Erst die laufende Aktion beenden.", true); renderAll(); return; }
+    if (!(x >= 1 && x <= 200 && y >= 1 && y <= 200)) { showResult("Die Karte reicht von 1 bis 200 (X und Y).", true); renderAll(); return; }
+    if (x === s.px && y === s.py) { showResult("Du bist schon hier (" + x + " / " + y + ").", true); renderAll(); return; }
+    const pl = placeAt(x, y);
+    origPage = back || origPage; clearResults();
+    travelTo(pl ? pl.id : "xy:" + x + "," + y, { after: () => { origPage = back || origPage; renderAll(); } });
+  }
+  // --- Landkarte: X/Y-Eingabe ---
+  let p8Pending = null;
+  function p8GotoHtml() {
+    const s = state;
+    const v = p8Pending || { x: s.px, y: s.py };
+    const inp = (id, val, lbl) => '<label class="p8-xy">' + lbl + ' <input id="' + id + '" type="number" inputmode="numeric" pattern="[0-9]*" min="1" max="200" step="1" value="' + val + '" aria-label="' + lbl + '-Koordinate"></label>';
+    let h = '<div class="p8-goto"><p class="p8-goto-t"><b>Zu Koordinaten reisen</b> <span class="p7-small">Karte 1–200</span></p><p class="p8-goto-f">' +
+      inp("p8-gx", v.x, "X") + " " + inp("p8-gy", v.y, "Y") + ' <a href="#" class="p7-btn" data-x="p8goto">Reisen</a></p>';
+    if (p8Pending) {
+      const pl = placeAt(p8Pending.x, p8Pending.y);
+      const nm = pl ? pl.name : p7FieldName(p8Pending.x, p8Pending.y);
+      h += '<p class="p8-confirm">Ziel: <b>' + origEsc(nm) + "</b>, X " + p8Pending.x + " · Y " + p8Pending.y + '<br><span class="p7-cost">' + origEsc(p8TravelCost(p8Pending.x, p8Pending.y)) + "</span><br>" +
+        '<a href="#" class="p7-btn" data-x="p8goconf">Reise bestätigen</a> <a href="#" class="p8-no" data-x="p8gono">abbrechen</a></p>';
+    } else h += '<p class="p7-small">Erst „Reisen“ zeigt Entfernung, Dauer und Kosten, dann bestätigen. Danach steht die Karte auf dem Ziel.</p>';
+    return h + "</div>";
+  }
+  function p8GotoCheck() {
+    const ex = document.getElementById("p8-gx"), ey = document.getElementById("p8-gy");
+    const rx = String(ex ? ex.value : "").trim(), ry = String(ey ? ey.value : "").trim();
+    if (!/^\d{1,3}$/.test(rx) || !/^\d{1,3}$/.test(ry)) return { err: "Bitte X und Y als ganze Zahlen eingeben (1 bis 200)." };
+    const x = +rx, y = +ry;
+    if (x < 1 || x > 200 || y < 1 || y > 200) return { err: "Außerhalb der Karte: X und Y müssen zwischen 1 und 200 liegen." };
+    if (state && x === state.px && y === state.py) return { err: "Da bist du schon (" + x + " / " + y + ")." };
+    const pl = placeAt(x, y);
+    if (pl && !placeOpen(pl)) return { err: pl.name + ": " + placeGate(pl).text + "." };
+    return { x, y };
+  }
+  // WIKI (wiki/text/berufe/*.txt): Kurzbeschreibung, Anforderungen, Werkzeug je Beruf
+  const P8_JOB_WIKI = {"Artefaktjuwelier": {"d": "Der Artefaktjuwelier stellt Artefakte her und färbt Diamanten.", "r": "Techlevel 9 + Diamantenverarbeitung + 2000 Austrahlung + Artefaktenschmiede", "w": "keins"}, "Biologe": {"d": "Der Biologe erforscht im Biolabor zunächst mehrere Level ähnlich den Researchlevels. Im Gegensatz zu den Researchlevels ist der Erfolg hierbei nicht garantiert sondern hängt von der Intelligenz ab. Durch mehr Intelligenz kann die Erfolgsquote auf bis zu 80% ge", "r": "1000 Intelligenz, Mikroskop, Biolabor + Techlevel 9", "w": ""}, "Chemiker": {"d": "kann Tränke, Pillen, Pilzmixe und anderes herstellen", "r": "Techlevel 1", "w": "Mörser und Stössel"}, "Diamantsucher": {"d": "Der Diamantensucher baut Diamanten ab.", "r": "Techlevel 6 + 1000 Austrahlung", "w": "Diamantendetektor und Mineral- oder Diamantenbohrer"}, "Erfinder": {"d": "Der Erfinder kann aus diversen Gegenständen neue Waffen/Gegenstände herstellen. Ein Erfinder kann nur in der Ideenschmiede arbeiten.", "r": "Techlevel 8, 600 Intelligenz + Mathematik + Physik + Ideenschmiede", "w": ""}, "Erzsammler": {"d": "Der Erzsammler baut direkt Erze und Kristalle ab. Durch Ausbau mit Steinerweiterungen lässt sich der Ertrag steigern.", "r": "Techlevel 2 + Erzdetector. Das \"Arbeiten\" kann abgebrochen werden.", "w": ""}, "Forscher": {"d": "Der Forscher kann im Forschungsgebäude nach neuen Technologien forschen und somit den Research Level deines Stammes erhöhen. Kann im Forschungsgebäude arbeiten und ausserdem können Forscher in der Erzverarbeitung Edelmetall sowie in der Uranverarbeitung Yellow", "r": "Techlevel 4", "w": ""}, "Gärtner": {"d": "Der Gärtner baut die verschiedensten Kräuter im Kräutergarten an. Sie dienen zum Einen für die Weiterverarbeitung aber auch zur Direkteinnahme. Es gibt rote, helle, braune Kräuter und einen Kräutermix. Beim Ausüben des Berufs bekommt man Naturverbundenheitspun", "r": "Techlevel 5 + Kräutergarten", "w": ""}, "Gas-Techniker": {"d": "Der Gastechniker kann durch Bohrungen Erdgas finden und bei erfolgreichem Graben errichtet er einen Gasturm damit Gaswerker arbeiten können.", "r": "Techlevel 7", "w": ""}, "Gaswerker": {"d": "Gaswerker können in Gasfördertürmen arbeiten. Sie füllen Gasbehälter ab und transportieren die ins Lager.", "r": "Techlevel 1 (+ Gasturm beim Bohren)", "w": ""}, "Geologe": {"d": "Ein Geologe sammelt Steine, kann Schwefel und Kalisalpeter finden", "r": "keine", "w": ""}, "Glasschmelzer": {"d": "Der Glasschmelzer kann in der Glasschmelze aus Sand brauchbares Glas herstellen.", "r": "Techlevel 3", "w": ""}, "Holzsammler": {"d": "Der Holzsammler sammelt Holz, kann Holzkohle finden", "r": "keine", "w": "keins"}, "Kunststoffsammler": {"d": "Der Kunststoffsammler baut direkt Kunststoff ab , kann einzelne Erzstücke finden", "r": "keine", "w": "keins"}, "Mechaniker": {"d": "Der Mechaniker kann in der Werkstatt Fahrzeuge und Fluggeräte produzieren. Kann nur in der Werkstatt arbeiten.", "r": "Techlevel 5, 300 Intelligenz + Werkstatt", "w": ""}, "Metallbauer": {"d": "Der Metallbauer sammelt Metall", "r": "keine", "w": "keins"}, "Öl-Techniker": {"d": "Der Erdöltechniker kann durch Bohrungen Erdölvorkommen finden und bei erfolgreichem Graben errichtet er einen Ölturm damit Ölwerker arbeiten können.", "r": "Techlevel 7", "w": ""}, "Ölwerker": {"d": "Ölwerker können in Erdölfördertürmen arbeiten. Sie füllen Ölbehälter ab und transportieren die ins Lager. Er kann im Benzincracker das gewonnene Erdöl in Benzin weiter verarbeiten.", "r": "Techlevel 1 (+ Ölturm beim Bohren)", "w": ""}, "Pilzsammler": {"d": "Der Pilzsammler sammelt diverse Pilzsorten in seinem Pilzhaus. Diese Pilze können vom Chemiker weiterverarbeitet werden.", "r": "Techlevel 5 + Ortskunde + Heilkunde + Pilzhaus", "w": ""}, "Psioniker": {"d": "Der Psioniker beeinflusst Fähigkeiten der Tiere.", "r": "500 Wahrnehmung + Psi Tempel + Techlevel 8", "w": ""}, "Sandsucher": {"d": "Der Sandsucher kann auf eigenen oder auf freien Ländern Sand abbauen. Je höher der Techlevel desto mehr Sand kann abgebaut werden. Das \"Arbeiten\" kann nicht abgebrochen werden.", "r": "eigenes Land, höherer Wasser/Nahrungsverbrauch", "w": "keins (ein Eimer sichert jedoch eine Mindestmenge von 4 Einheiten)"}, "Schneider": {"d": "Der Schneider kann jagen und aus den Häuten der Tiere eine neue Ressource: Fell - erzeugen. Aus diesen Fellen kann er Kleidung, Schuhe etc. herstellen. Schneider können nur in der Schneiderei arbeiten.", "r": "Techlevel 6, 300 Intelligenz & 100 Geschwindigkeit + Schneiderei", "w": ""}, "Spion": {"d": "Der Spion kann den Rucksack eines Spielers ausspionieren, Fahrzeuge beschädigen, gemeine Stolperfallen legen, nach ihnen suchen und entschärfen (dazu muss er auf dem Stammland stehen) und anonyme Sprengfallen platzieren.", "r": "Rhetorik, Taktik + 600 Geschwindigkeit + Techlevel 2", "w": ""}, "Tierfänger": {"d": "Der Tierfänger kann abgehauene Tiere und besondere Arten fangen", "r": "Techlevel 4 + Taktik + Verbergen", "w": ""}, "Uransammler": {"d": "Der Uransammler baut direkt Natururan ab.", "r": "Techlevel 4 + Urandetector + Ortskunde + Verbergen", "w": ""}, "Waffentechniker": {"d": "kann Waffen und Munition herstellen", "r": "Techlevel 1", "w": "keins"}, "Werkzeugmacher": {"d": "Der Werkzeugmacher stellt Schaufeln, Spitzhacken, Bohrspitzen, Förderröhre und Behälter für Öl und Gas her.", "r": "Techlevel 3", "w": ""}};
+  // --- Fähigkeiten: Karten mit Symbolen (DESIGN-Darstellung, Inhalte WIKI) ---
+  const P8_TL_EP = [0, 100, 250, 400, 550, 700, 850, 1000, 1200, 1500]; // aus tlUnlockText (EP-Weg)
+  const P8_SKILL_CATS = [
+    { k: "rep", t: "Reisen", how: "Reiseerfahrung: alle 10 Reisen oder Schritte auf der Karte +1 (Wiki: je 10 Felder)." },
+    { k: "hep", t: "Handel", how: "Handelserfahrung: jeder Kauf oder Verkauf beim Händler +1 (DESIGN)." },
+    { k: "kep", t: "Kampf", how: "Kampferfahrung: jeder Kampf gibt 1–3 (Wiki)." },
+    { k: "nv", t: "Natur und Heilkunde", how: "Naturverbundenheit: Arbeit als Gärtner oder Pilzsammler +1 (Wiki)." },
+    { k: "te", t: "Tiere", how: "Tiererfahrung: Tiertraining und Fänge als Tierfänger +1 (Wiki)." },
+    { k: "kreativ", t: "Kreativität", how: "Kreativität: jeder Arbeitsgang als Chemiker, Schneider oder Waffentechniker +1 (Wiki)." },
+    { k: "flex", t: "Flexibilität", how: "Flexibilität: jede Umschulung auf einen neuen Beruf +50 (DESIGN)." },
+    { k: null, t: "Ohne Zähler", how: "Diese Erfahrungsart führt der Prototyp noch nicht." },
+  ];
+  function p8SkillImg(key, cls) { return '<img class="' + (cls || "p8-ico") + '" src="assets/skills/' + key + '.png" alt="" width="40" height="40" loading="lazy">'; }
+  function p8JobImg(name) { if (![].concat(JOBS_TL0, JOBS_TL1, JOBS_TL2, JOBS_TL3, JOBS_TL4, JOBS_TL5, JOBS_TL6, JOBS_TL7, JOBS_TL8, JOBS_TL9).includes(name)) return p8SkillImg("cat-sonst"); return p8SkillImg("job-" + name.toLowerCase().replace(/ä/g, "ae").replace(/ö/g, "oe").replace(/ü/g, "ue").replace(/ß/g, "ss").replace(/[^a-z0-9]+/g, "-").replace(/^-|-$/g, "")); }
+  function p8Bar(v, max, cls) {
+    const w = Math.max(0, Math.min(100, Math.round((v / (max || 1)) * 100)));
+    return '<span class="p8-bar' + (cls ? " " + cls : "") + '"><i style="width:' + w + '%"></i></span>';
+  }
+  function p8FaehigkeitenPage() {
+    const s = state; const tl = s.techlevel || 0; const jobs = availableJobs(s);
+    const nextEp = P8_TL_EP[tl + 1];
+    let h = "<h2>Fähigkeiten</h2>" + origLive();
+    h += '<div class="p8-top"><div class="p8-top-job">' + p8JobImg(s.job) + "<div><b>" + origEsc(s.job) + '</b><br><span class="p7-small">dein Beruf</span></div></div>' +
+      '<div class="p8-top-tl"><b>Techlevel ' + tl + "</b>" + (nextEp ? " → " + (tl + 1) + ": " + p8Bar(s.ep || 0, nextEp) + ' <span class="p7-small">' + (s.ep || 0) + "/" + nextEp + " EP</span>" : " (höchstes)") +
+      '<br><span class="p7-small">' + (nextEp ? origEsc("Weg zu TL " + (tl + 1) + ": " + tlUnlockText(tl + 1)) : "") + "</span></div></div>";
+    h += '<p class="p7-small">Legende: <span class="p8-chip on">dein Beruf</span> <span class="p8-chip can">erlernbar</span> <span class="p8-chip lock">gesperrt</span>. Ein Berufswechsel ist eine Ausbildung: 90 Wiki-Minuten (60 mit Flexibilität, 30 mit Perfektion), hier wenige Sekunden. Kosten: keine Rohstoffe, nur die Zeit.</p>';
+    h += '<h3 class="p8-h">Berufe nach Techlevel</h3>';
+    [JOBS_TL0, JOBS_TL1, JOBS_TL2, JOBS_TL3, JOBS_TL4, JOBS_TL5, JOBS_TL6, JOBS_TL7, JOBS_TL8, JOBS_TL9].forEach((group, gtl) => {
+      const open = tl >= gtl;
+      h += '<div class="p8-tl' + (open ? " open" : " locked") + '"><p class="p8-tl-h"><span class="p8-tl-n">TL ' + gtl + "</span> " + (open ? "freigeschaltet" : "gesperrt · " + origEsc(tlUnlockText(gtl))) + '</p><div class="p8-cards">';
+      group.forEach((name) => {
+        const on = s.job === name; const can = jobs.includes(name) && !on;
+        const miss = can ? p5JobMissing(s, name) : "";
+        const w = P8_JOB_WIKI[name] || {};
+        const st = on ? "on" : can && !miss ? "can" : "lock";
+        let foot;
+        if (on) foot = '<span class="p8-state on">✔ dein Beruf</span>';
+        else if (can && !miss) {
+          const min = hasSkill(s, "Perfektion") ? 30 : hasSkill(s, "Flexibilität") ? 60 : 90;
+          foot = '<a href="#" class="p7-btn p8-learn" data-job="' + origEsc(name) + '">erlernen</a> <span class="p7-cost">Ausbildung ' + min + " Wiki-min (hier " + Math.round(wikiMinMs(min) / 1000) + " s) · keine Rohstoffe</span>";
+        } else if (can) foot = '<span class="p8-state lock">fehlt: ' + origEsc(miss) + "</span>";
+        else foot = '<span class="p8-state lock">ab TL ' + gtl + (P5_JOBREQ[name] ? " + " + origEsc(p5JobReqText(name)) : "") + "</span>";
+        h += '<div class="p8-card ' + st + '">' + p8JobImg(name) + '<div class="p8-card-b"><p class="p8-card-t">' + origEsc(name) + "</p>" +
+          '<p class="p8-card-d">' + origEsc(w.d || "") + "</p>" +
+          (w.r || w.w ? '<p class="p8-card-r">' + (w.r ? "Wiki-Anforderung: " + origEsc(w.r) : "") + (w.w && w.w !== "keins" ? " · Werkzeug: " + origEsc(w.w) : "") + "</p>" : "") +
+          '<p class="p8-card-f">' + foot + "</p></div></div>";
+      });
+      h += "</div></div>";
+    });
+    h += '<h3 class="p8-h">Fähigkeiten aus Erfahrung</h3><p class="p7-small">Fähigkeiten lernt man nicht, sie kommen von selbst, sobald der Erfahrungswert die Schwelle erreicht (Schwellen aus dem Wiki).</p><div class="p8-cards p8-skills">';
+    P8_SKILL_CATS.forEach((cat) => {
+      const list = SKILLS.filter((x) => x[1] === cat.k).sort((a, b) => a[2] - b[2]);
+      if (!list.length) return;
+      const have = cat.k ? (s[cat.k] || 0) : 0;
+      const got = list.filter((x) => cat.k && have >= x[2]).length;
+      const next = list.find((x) => !(cat.k && have >= x[2]));
+      h += '<div class="p8-card p8-skill' + (got === list.length ? " on" : got ? " part" : " lock") + '">' + p8SkillImg("cat-" + (cat.k || "sonst")) + '<div class="p8-card-b"><p class="p8-card-t">' + origEsc(cat.t) +
+        ' <span class="p8-lvl">Stufe ' + got + "/" + list.length + "</span></p>" +
+        (cat.k ? '<p class="p8-card-d">' + origEsc(SKILL_STAT_LABEL[cat.k]) + ": <b>" + have + "</b>" + (next ? " · nächste: " + origEsc(next[0]) + " bei " + next[2] + " " + p8Bar(have, next[2]) : " · alles erreicht") + "</p>" : "") +
+        '<ul class="p8-sk">' + list.map((x) => {
+          const ok = cat.k && have >= x[2];
+          return '<li class="' + (ok ? "on" : "lock") + '"><span class="p8-sk-m">' + (ok ? "✔" : "🔒") + "</span> <b>" + origEsc(x[0]) + "</b> " + (cat.k ? '<span class="p7-small">' + (ok ? "gelernt" : "ab " + x[2] + " (noch " + (x[2] - have) + ")") + "</span>" : "") +
+            '<br><span class="p8-sk-e">' + origEsc(x[3]) + "</span></li>";
+        }).join("") + '</ul><p class="p8-card-r">' + origEsc(cat.how) + "</p></div></div>";
+    });
+    return h + "</div>";
+  }
+  // --- Tierbilder (Wiki: Hund, Esel, Pferd; Affe, Wolf, Adler als DESIGN-Bild) ---
+  const P8_ANIMALS = ["Hund", "Esel", "Pferd", "Affe", "Wolf", "Adler"];
+  function p8AniSrc(type) { const T = PET_TYPES[type]; return T && T.img ? T.img : null; }
+  function p8AniImg(type, size) {
+    const src = p8AniSrc(type); if (!src) return "";
+    return '<img class="p8-ani' + (size ? " " + size : "") + '" src="' + src + '" alt="' + origEsc(type) + '" title="' + origEsc(type) + '">';
+  }
+  function p8AnimalGallery() {
+    return '<h3>Alle Tierarten</h3><div class="p8-anis">' + P8_ANIMALS.map((t) => '<div class="p8-ani-card">' + p8AniImg(t) + "<p><b>" + t + '</b></p><p class="p7-small">' + origEsc((PET_TYPES[t] || {}).skill || "") + "</p></div>").join("") +
+      '</div><p class="p7-small">Bilder von Hund, Esel und Pferd aus dem Wiki-Archiv; Affe, Wolf und Adler nachgezeichnet (DESIGN).</p>';
+  }
+  /** Bild zum Ergebnis, wenn ein Tier gefangen, gekauft oder angeboten wird */
+  function p8ResultAnimal(text) {
+    const m = /\b(Hund|Esel|Pferd|Affe|Wolf|Adler)\b[^.]*\b(gefangen|gekauft|bietet|Angebot|anmelden)|bietet dir ein Tier an: (Hund|Esel|Pferd|Affe|Wolf|Adler)/.exec(text || "");
+    return m ? p8AniImg(m[1] || m[3], "res") : "";
+  }
+  // --- Aufgaben-Hinweis mit aktuellem Fehlbestand ---
+  function p8HintText(t) {
+    const s = state; let h = t.h;
+    if (!s || !t) return h;
+    if (t.cost && !p7Met(s, t.g)) {
+      const have = (k) => (s.inv[k] || 0) + lagerN(s, k); // Rucksack + Privatlager (auch das alte am Bauplatz)
+      const miss = Object.keys(t.cost).filter((k) => have(k) < t.cost[k]).map((k) => (t.cost[k] - have(k)) + " " + k);
+      h += miss.length ? " Es fehlt noch (Rucksack + Lager): " + miss.join(", ") + "." : " Alles beisammen.";
+    }
+    if (t.g && t.g.t === "need") {
+      const miss = Object.keys(t.g.cost).filter((k) => (s.inv[k] || 0) < t.g.cost[k]).map((k) => (t.g.cost[k] - (s.inv[k] || 0)) + " " + k);
+      if (miss.length) h += " Es fehlt noch: " + miss.join(", ") + ".";
+      if (!placeOpen(locById("schrott"))) h += " Schrottfeld noch gesperrt: erst Aufgaben 1–3.";
+    }
+    return h;
+  }
+
+  // --- Seiten-Nachbearbeitung ---
+  const p8RenderOrigPage = renderOrigPage;
+  renderOrigPage = function () {
+    if (state && origPage === "faehigkeiten") return p8TravelBoxHtml() + p8FaehigkeitenPage();
+    let h = p8RenderOrigPage();
+    if (!state) return h;
+    if (origPage === "landkarte") h = h.replace("<h2>Landkarte</h2>", "<h2>Landkarte</h2>" + p8GotoHtml());
+    if (origPage === "tierstall") {
+      h = h.replace("Bilder gibt es nur für Hund, Esel und Pferd.", "");
+      if (state.petOffer) h = h.replace("<p>Angebot vom Händler: ", '<p class="p8-offer">' + p8AniImg(state.petOffer.type, "s") + "Angebot vom Händler: ");
+      h += p8AnimalGallery();
+    }
+    if (origPage === "tierkampf" && state.pet) {
+      const foes = P8_ANIMALS.filter((t) => t !== state.pet.type).slice(0, 3);
+      h = h.replace("<h2>Tierkämpfe</h2>", '<h2>Tierkämpfe</h2><div class="p8-pit">' + p8AniImg(state.pet.type) + '<span class="p8-vs">gegen</span>' + foes.map((t) => p8AniImg(t, "s")).join("") + "</div>");
+    }
+    // Nur Seiten mit Orten werden ganz verlinkt; Ergebnis-Zeilen und Aufgaben-Kasten überall (Zähler wie „(1 von 25)“ bleiben Text)
+    return p8TravelBoxHtml() + (P8_COORD_PAGES.includes(origPage) ? p8Coords(h, origPage) : h);
+  };
+  const P8_COORD_PAGES = ["erkunden", "graben", "aufgaben", "ereignisse", "postfach", "uebersicht", "laender", "land", "landkarte", "arbeiten", "jagen", "kaempfen", "wassersuche", "gebaeude", "bauoptionen", "stamm"];
+  const p8GuideBox = p7GuideBoxHtml;
+  p7GuideBoxHtml = function () { return p8Coords(p8GuideBox(), "aufgaben"); };
+  const p8ExtCmd = extCmd;
+  extCmd = function (cmd) {
+    const bits = String(cmd || "").split("|");
+    if (bits[0] === "p8go") { p8Go(parseInt(bits[1], 10), parseInt(bits[2], 10), bits[3] || origPage); return; }
+    if (bits[0] === "p8goto") {
+      const r = p8GotoCheck(); origPage = "landkarte";
+      if (r.err) { p8Pending = null; showResult(r.err, true); renderAll(); return; }
+      p8Pending = { x: r.x, y: r.y }; clearResults(); renderAll(); return;
+    }
+    if (bits[0] === "p8goconf") {
+      const p = p8Pending; const r = p8GotoCheck(); origPage = "landkarte";
+      if (p && !r.err && (r.x !== p.x || r.y !== p.y)) { p8Pending = { x: r.x, y: r.y }; showResult("Neues Ziel – bitte noch einmal bestätigen.", true); renderAll(); return; }
+      p8Pending = null; if (p) p8Go(p.x, p.y, "landkarte"); else renderAll(); return;
+    }
+    if (bits[0] === "p8gono") { p8Pending = null; origPage = "landkarte"; renderAll(); return; }
+    return p8ExtCmd(cmd);
+  };
+  // Eingabe live: Kosten beim Tippen anzeigen (Bestätigen bleibt ein eigener Schritt)
+  document.addEventListener("input", (e) => {
+    const t = e && e.target; if (!t || (t.id !== "p8-gx" && t.id !== "p8-gy")) return;
+    const box = document.querySelector ? document.querySelector("#orig-sheet .p8-goto .p7-small:last-child") : null;
+    const r = p8GotoCheck();
+    if (box) box.textContent = r.err ? r.err : "Ziel X " + r.x + " · Y " + r.y + ": " + p8TravelCost(r.x, r.y) + ". „Reisen“ zum Prüfen und Bestätigen.";
+  });
+  window.__p8 = { p8Coords, p8XYLink, p8Go, p8GotoCheck, p8TravelCost, p8FaehigkeitenPage, p8AnimalGallery, get travelUi() { return travelUi; }, get pending() { return p8Pending; } };
 
   document.addEventListener("keydown", (e) => {
     if (!state || state.dead || busy) return;
