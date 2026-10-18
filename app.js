@@ -10508,6 +10508,13 @@
     const obj = { sammeln: j.res, wasser: "Wasser", nahrung: "Nahrung" }[j.kind];
     return { st: P10_JOB[j.kind].st.split(" ")[0], job: (obj ? obj + " – " : "") + tgt };
   }
+  function p10Pos(o, now) { // aktuelle Position, auch unterwegs (erst waagrecht, dann senkrecht)
+    const j = o.job; if (!j || !j.tr) return j && now >= j.t0 ? { x: j.tx, y: j.ty } : { x: o.x, y: o.y };
+    if (now >= j.t0 + j.tr) return { x: j.tx, y: j.ty };
+    let steps = Math.max(0, Math.floor((now - j.t0) / P10_STEP_MS)); const dx = j.tx - j.fx, dy = j.ty - j.fy;
+    const sx = Math.min(steps, Math.abs(dx)); steps -= sx; const sy = Math.min(steps, Math.abs(dy));
+    return { x: j.fx + Math.sign(dx) * sx, y: j.fy + Math.sign(dy) * sy };
+  }
   function p10BatText(o) { return OPTIMUS_BATTERY ? "Akku: " + Math.round(o.bat) + " %" : "Akku: deaktiviert (Testmodus)"; }
   function p10ReqHtml(o, cls) {
     if (!o.req) return "";
@@ -10522,7 +10529,7 @@
       '<div class="p10-job">' + origEsc(st.job) + "</div></div></div>";
     if (o.stage >= 1) {
       h += '<div class="p10-bar"><i style="width:' + p10JobPct(o, now) + '%"></i></div>';
-      h += '<div class="p10-small">' + origEsc(p10BatText(o)) + (o.stage >= 1 ? " · Position " + o.x + "/" + o.y : "") + "</div>";
+      h += '<div class="p10-small">' + origEsc(p10BatText(o)) + (o.stage >= 1 ? " · Position " + p10Pos(o, now).x + "/" + p10Pos(o, now).y : "") + "</div>";
     }
     if (o.damaged) h += '<div class="p10-req bad"><span>Optimus ist beschädigt.</span> <a href="#" class="p10-btn" data-x="p10patch">Flicken</a></div>';
     h += p10ReqHtml(o);
@@ -10551,7 +10558,7 @@
     h += '<p class="p10-stline"><b>Status:</b> <span class="p10-st">' + origEsc(st.st) + "</span></p><p>" + origEsc(st.job) + "</p>";
     if (o.stage >= 1) h += '<div class="p10-bar big"><i style="width:' + p10JobPct(o, now) + '%"></i></div>';
     if (o.stage >= 1) h += "<p><b>Stufe " + lvl + "</b> · Optimus-EP " + o.oep + (P10_LVL[lvl] != null ? " / " + P10_LVL[lvl] + " bis Stufe " + (lvl + 1) : " (höchste Stufe)") + "</p>";
-    h += "<p>Position: " + (o.stage >= 1 || o.found ? p10PlaceName(o.x, o.y) : "unbekannt") + " · Du bist bei " + origEsc(p10PlaceName(p7Pos(s).x, p7Pos(s).y)) + "</p>";
+    h += "<p>Position: " + (o.stage >= 1 || o.found ? p10PlaceName(p10Pos(o, now).x, p10Pos(o, now).y) : "unbekannt") + " · Du bist bei " + origEsc(p10PlaceName(p7Pos(s).x, p7Pos(s).y)) + "</p>";
     h += "<p>" + origEsc(p10BatText(o)) + (OPTIMUS_BATTERY ? " · Laden: 1 %/Min. unterwegs, 3 %/Min. bei Haus oder Stammlager, 10 %/Min. mit Reaktor" : "") + "</p>";
     h += "<p>Erledigt: " + (o.stats.jobs || 0) + " Aufträge · " + (o.stats.fled || 0) + "× geflohen · " + (o.stats.parts || 0) + " Ersatzteile gefunden</p>";
     if (o.damaged) h += '<p class="p10-bad">Beschädigt (' + origEsc(o.damaged.cause) + '). ' + origLink("Flicken (1 Ersatzteil oder 10 Metall)", 'data-x="p10patch"') + "</p>";
