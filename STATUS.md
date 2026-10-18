@@ -192,6 +192,7 @@ Live unter **https://unexist2010.github.io/endzeitspiel/** (Repo `unexist2010/en
 - Neuer Menüpunkt Aktionen → Nahrungssuche: Sammeln je Gelände (Wald/Oase viel, Wüste/Ruinen wenig), Beifunde, Angriffe, Jagd auf Wilden Hund, Wildschwein, Echse, Ratte; „Was dieses Feld bietet“, Verlauf 20.
 - Wilder Hund 14–22 Nahrung je Sieg (vorher Ø ≈ 8). Details: NOTES-pass9.md. sw ezs-pwa-8, ?v=14.
 - Hotfix 9.1: Nachholen nach Abwesenheit höchstens 30 Minuten; dadurch gestorbene Stände werden beim Laden wiederbelebt; tote Stände mit Fortschritt werden nie still ersetzt (Todesfenster mit Wiederbeleben/Neu). sw ezs-pwa-9, ?v=15.
+- Fix Höhle: Ort-Aktionen (Höhle erkunden, Betreten, Quest-Schritte, Handeln) als Kasten auf Erkunden/Graben/Nahrungssuche, „Jetzt …“-Knopf in Aufgaben am Zielort, Link „Aktionen an diesem Ort“ rechts. sw ezs-pwa-10, ?v=16.
 
 ## Feedback erwünscht
 

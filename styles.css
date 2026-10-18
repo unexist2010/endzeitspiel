@@ -1054,3 +1054,14 @@ details.p7-ch li.locked { opacity: 0.7; }
 /* Hotfix 9.1: Todesfenster mit Auswahl */
 .dead-overlay .box .btn { display: block; width: 100%; min-height: 44px; margin: 8px 0 0; }
 .dead-overlay .dead-keep { color: #cfc6a8; font-size: 0.95em; }
+/* Fix Höhle: Ort-Aktionen sichtbar */
+.fh-box { margin: 10px 0; padding: 10px 12px; border: 1px solid #c9a24a; background: rgba(201, 162, 74, 0.12); border-radius: 3px; }
+.fh-box .fh-t { margin: 0 0 6px; font-size: 1.05em; color: #f0d58a; }
+.fh-box .fh-done { color: #9fd18b; margin: 4px 0; }
+.fh-box .fh-more, .fh-here-link { margin: 6px 0 0; }
+.fh-task { display: block; margin: 4px 0; }
+a.fh-hud { display: block; margin: 2px 0 6px; font-size: 11px; color: #e6c35c; text-decoration: underline; }
+@media (max-width: 760px) {
+  .fh-box .p7-btn, .fh-task .p7-btn { min-height: 44px; display: inline-flex; align-items: center; }
+  .fh-box .fh-more a, .fh-here-link a, a.fh-hud { display: inline-block; min-height: 44px; line-height: 44px; }
+}

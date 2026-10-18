@@ -9845,6 +9845,94 @@
     if (lost) log("Wiederbelebung: −" + lost + " Gold.", "bad");
   }
 
+  // =====================================================================
+  // Fix „Höhle“ (18.10.2026): Ort-Aktionen (Höhle erkunden, Betreten, Quest-Schritte, Handeln) waren nur in der Land-Ansicht
+  // (Landkarte → eigenes Feld) zu finden. Jetzt: Kasten „Hier ist …“ auf Erkunden/Graben/Nahrungssuche, Aufgaben mit
+  // „Jetzt …“-Knopf am Zielort, Link „Aktionen an diesem Ort“ unter dem Ort rechts.
+  // =====================================================================
+  const FH_RES = ["holz", "stein", "metall", "kunststoff", "wasser", "sand", "oel", "gas", "erz", "graben"];
+  function fhHereLoc() {
+    const s = state; if (!s || !s.locId || s.locId === "field") return null;
+    const l = locById(s.locId);
+    if (!l) return null;
+    if (typeof s.px === "number" && (l.x !== s.px || l.y !== s.py)) return null;
+    return l;
+  }
+  /** Ort-Aktionen wie in der Land-Ansicht (gleiche ACTIONS, gleiche show-Regeln), ohne Rohstoff-Arbeiten. */
+  function fhActs(loc) {
+    const s = state; const out = [];
+    (loc.actions || []).forEach((aid) => {
+      if (FH_RES.includes(aid)) return;
+      const def = ACTIONS[aid]; if (!def) return;
+      if (def.show && !def.show(s)) return;
+      if (aid === "cave") {
+        if (s.cavesVisited && s.cavesVisited[loc.caveKey]) out.push({ done: "Höhlen-Bonus hier schon geholt ✔" });
+        else out.push({ aid, label: "Höhle erkunden (Bonus)", cost: "einmalig +75 EP und +75 CP (Wiki) · keine Nahrung/Wasser · " + Math.max(1, Math.round((def.duration || 500) / 1000)) + " s" });
+        return;
+      }
+      if (aid === "visit") { out.push({ aid, label: (loc.tags || []).includes("Höhle") ? "Höhle betreten" : "Betreten", cost: p7CostText("work", "visit") }); return; }
+      out.push({ aid, label: def.label, cost: aid === "rest" ? p7CostText("work", "rest") : p7CostText("work", aid) });
+    });
+    if (loc.trade) out.push({ page: "handeln", label: "Handeln", cost: "Händler hier" });
+    if (availableEnemiesAt(loc).length) out.push({ page: "kaempfen", label: "Kämpfen", cost: availableEnemiesAt(loc).map((e) => e.name).join(", ") });
+    return out;
+  }
+  function fhBoxHtml() {
+    const loc = fhHereLoc(); if (!loc) return "";
+    const acts = fhActs(loc);
+    if (!acts.some((a) => a.aid || a.page && a.page !== "kaempfen") && !acts.some((a) => a.done)) return "";
+    const cave = (loc.tags || []).includes("Höhle");
+    let h = '<div class="fh-box"><p class="fh-t">' + (cave ? "Hier ist eine Höhle: " : "Hier: ") + "<b>" + origEsc(loc.name) + "</b> (" + loc.x + "/" + loc.y + ")</p>";
+    acts.forEach((a) => {
+      if (a.done) { h += '<p class="fh-done">' + origEsc(a.done) + "</p>"; return; }
+      const attr = a.aid ? 'data-x="fhdo|' + a.aid + '"' : 'data-page="' + a.page + '"';
+      h += '<p class="p7-btnrow"><a href="#" class="p7-btn fh-btn" ' + attr + ">" + origEsc(a.label) + '</a> <span class="p7-cost">' + origEsc(a.cost || "") + "</span></p>";
+    });
+    h += '<p class="fh-more">' + origLink("Aktionen an diesem Ort", 'data-land="' + loc.id + '"') + "</p></div>";
+    return h;
+  }
+  /** Ort-Aktion ausführen, ohne die Seite zu wechseln (gleiche Logik wie data-here in der Land-Ansicht). */
+  function fhDo(aid) {
+    const loc = fhHereLoc();
+    if (!loc || !(loc.actions || []).includes(aid)) { showResult("Diese Aktion gibt es nur direkt am Ort.", true); renderAll(); return; }
+    startAction(aid);
+  }
+  const fhHereBase = p7HereHtml;
+  p7HereHtml = function (withGround) {
+    const base = fhHereBase(withGround);
+    const loc = fhHereLoc();
+    const more = loc ? '<p class="fh-here-link">' + origLink("Aktionen an diesem Ort", 'data-land="' + loc.id + '"') + "</p>" : "";
+    return base + (fhBoxHtml() || more);
+  };
+  /** Aufgabe → Ort-Aktion, falls man gerade dort steht. */
+  function fhTaskDo(t) {
+    const loc = fhHereLoc(); if (!loc || !t || !t.g) return null;
+    const g = t.g; const has = (aid) => (loc.actions || []).includes(aid);
+    if (g.t === "cave" && has("cave") && !(state.cavesVisited || {})[loc.caveKey] && (!g.key || g.key === loc.caveKey)) return { attr: 'data-x="fhdo|cave"', label: "Jetzt Höhle erkunden" };
+    if (g.t === "act" && g.a && !FH_RES.includes(g.a) && has(g.a) && ACTIONS[g.a]) return { attr: 'data-x="fhdo|' + g.a + '"', label: "Jetzt: " + ACTIONS[g.a].label };
+    if (g.t === "act" && g.a && FH_RES.includes(g.a) && g.a !== "graben" && has(g.a)) return { attr: 'data-here="' + loc.id + "|" + g.a + '"', label: "Jetzt: " + ACTIONS[g.a].label };
+    if (g.t === "kill" && g.e && availableEnemiesAt(loc).some((e) => e.id === g.e)) return { attr: 'data-foe="' + g.e + '"', label: "Jetzt kämpfen: " + ENEMIES[g.e].name };
+    return null;
+  }
+  const fhTaskLinksBase = p7TaskLinks;
+  p7TaskLinks = function (t) {
+    const d = fhTaskDo(t);
+    const base = fhTaskLinksBase(t);
+    if (!d) return base;
+    return '<span class="p7-links fh-task"><a href="#" class="p7-btn fh-btn" ' + d.attr + ">" + origEsc(d.label) + "</a></span>" + base;
+  };
+  const fhHudBase = p7HudLocHtml;
+  p7HudLocHtml = function () {
+    const loc = fhHereLoc();
+    return fhHudBase() + (loc ? '<a href="#" class="fh-hud" data-land="' + loc.id + '" title="Land-Ansicht dieses Feldes">Aktionen an diesem Ort&nbsp;›</a>' : "");
+  };
+  const fhExtCmd = extCmd;
+  extCmd = function (cmd) {
+    const b = String(cmd || "").split("|");
+    if (b[0] === "fhdo") { fhDo(b[1]); return; }
+    return fhExtCmd(cmd);
+  };
+
   document.addEventListener("keydown", (e) => {
     if (!state || state.dead || busy) return;
     if (!document.body.classList.contains("ingame")) return;
