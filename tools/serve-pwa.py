@@ -9,5 +9,5 @@ class H(http.server.SimpleHTTPRequestHandler):
         if self.path.split("?")[0].endswith((".html", ".js", ".css", ".webmanifest", "/")): self.send_header("Cache-Control", "no-cache")
         super().end_headers()
 port = int(sys.argv[1]) if len(sys.argv) > 1 else 8765
-print("Endzeitspiel: http://localhost:%d/  (Strg+C beendet)" % port)
+print("Weltuntergangs-Spiel: http://localhost:%d/  (Strg+C beendet)" % port)
 http.server.ThreadingHTTPServer(("0.0.0.0", port), functools.partial(H, directory=ROOT)).serve_forever()

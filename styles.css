@@ -1,4 +1,4 @@
-/* Adapted from archive/css/endzeitspiel.css (2012 server) + table_main frames (2004–2011). */
+/* Adapted from the archived original CSS (2012 server) + table_main frames (2004–2011). */
 * { box-sizing: border-box; }
 html, body { margin: 0; padding: 0; }
 body {
@@ -206,7 +206,7 @@ button.danger {
 .res-strip { margin: 8px 0; line-height: 22px; }
 .res-strip .chip { display: inline-block; margin: 0 8px 4px 0; white-space: nowrap; }
 
-/* Rohstoff-Icons (aus endzeitspiel.css, Pfade lokal) */
+/* Rohstoff-Icons (aus dem archivierten Original-CSS, Pfade lokal) */
 .res-nahrung, .res-wasser, .res-holz, .res-stein, .res-metall, .res-kunststoff,
 .res-erz, .res-oel, .res-gas, .res-gold, .res-sand, .res-benzin, .res-kristall,
 .res-edelmetall, .res-uran, .res-kupfer, .res-kronkorken, .res-sirup,

@@ -1,6 +1,6 @@
-// Service Worker Endzeitspiel (PWA). Bei jeder neuen Version VERSION hochzählen, dann wird der Cache erneuert.
+// Service Worker Weltuntergangs-Spiel (PWA). Bei jeder neuen Version VERSION hochzählen, dann wird der Cache erneuert.
 // Code und Seite (HTML/JS/CSS/Manifest): Netz zuerst, Cache als Rückfall (offline). Bilder: Cache zuerst.
-const VERSION = "ezs-pwa-12";
+const VERSION = "wus-pwa-13"; // Umbenennung: neues Präfix „wus“ (Weltuntergangs-Spiel); alte „ezs-pwa-*“-Caches räumt activate weg
 const PRECACHE = [
   "./",
   "index.html",
@@ -106,7 +106,7 @@ self.addEventListener("install", (e) => {
   e.waitUntil(caches.open(VERSION).then((c) => c.addAll(PRECACHE.map((u) => new Request(u, { cache: "reload" })))).then(() => self.skipWaiting()));
 });
 self.addEventListener("activate", (e) => {
-  e.waitUntil(caches.keys().then((keys) => Promise.all(keys.filter((k) => k !== VERSION).map((k) => caches.delete(k)))).then(() => self.clients.claim()));
+  e.waitUntil(caches.keys().then((keys) => Promise.all(keys.filter((k) => k !== VERSION && /^(ezs|wus)-pwa-/.test(k)).map((k) => caches.delete(k)))) /* nur eigene Caches – andere Seiten auf github.io bleiben unberührt */.then(() => self.clients.claim()));
 });
 self.addEventListener("message", (e) => { if (e.data === "skipWaiting") self.skipWaiting(); });
 self.addEventListener("fetch", (e) => {

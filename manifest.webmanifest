@@ -1,7 +1,7 @@
 {
-  "name": "Endzeitspiel",
-  "short_name": "Endzeit",
-  "description": "Endzeitspiel – Einzelspieler-Prototyp des textbasierten Browsergames.",
+  "name": "Weltuntergangs-Spiel",
+  "short_name": "Weltuntergang",
+  "description": "Weltuntergangs-Spiel – Einzelspieler-Prototyp des textbasierten Browsergames.",
   "lang": "de",
   "id": "./",
   "start_url": "./index.html",

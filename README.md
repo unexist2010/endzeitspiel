@@ -1,7 +1,13 @@
-# Endzeitspiel — Single-Player Prototyp
+# Weltuntergangs-Spiel — Single-Player Prototyp
+
+> **Umbenennung (Oktober 2026):** Das Projekt hieß früher „Endzeitspiel“ und heißt jetzt **„Weltuntergangs-Spiel“**.
+> Der alte Name wurde aus rechtlichen Gründen ersetzt. Das Repository und die Adresse
+> (`https://unexist2010.github.io/endzeitspiel/`, Repo `unexist2010/endzeitspiel`) tragen aus technischen Gründen
+> noch den alten Namen: Eine Umbenennung würde die bereits installierte App und bestehende Links kaputt machen.
+> Spielstände unter dem alten Speicher-Schlüssel werden beim Start automatisch übernommen.
 
 ```bash
-cd /workspace/endzeitspiel/prototype && python3 -m http.server 8765
+cd prototype && python3 -m http.server 8765
 ```
 
 Oberfläche: dunkles/goldenes Original-Chrome (Banner, linkes Menü, Rahmen).

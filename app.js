@@ -1,13 +1,30 @@
 /**
- * Endzeitspiel — Single-Player Prototyp
+ * Weltuntergangs-Spiel — Single-Player Prototyp
  * Wiki wo belegt; Needs/AG/Kampf/Quest-Belohnungen/TL-Unlock als DESIGN (../../DESIGN.md)
  */
 (function () {
   "use strict";
 
-  const STORAGE_KEY = "endzeitspiel_prototype_v3"; // Durchgang 6: neuer Schlüssel → frischer Standard-Charakter (Wunsch des Spielers)
-  const LEGACY_STORAGE_KEYS = ["endzeitspiel_prototype_v1", "endzeitspiel_prototype_v2"]; // alte Stände werden beim Start ignoriert und entfernt
-  const HELP_DISMISS_KEY = "endzeitspiel_help_dismissed_v1";
+  const STORAGE_KEY = "weltuntergangs_spiel_v3"; // Umbenennung (Okt 2026): neuer Name des Spielstand-Schlüssels
+  const HELP_DISMISS_KEY = "weltuntergangs_spiel_help_dismissed_v1";
+  // Alte Schlüssel aus der Zeit vor der Umbenennung (alter Projektname). Nur für die Übernahme beim Start – bitte nicht ändern.
+  const RENAMED_STORAGE_KEYS = [
+    ["endzeitspiel_prototype_v3", STORAGE_KEY],
+    ["endzeitspiel_prototype_v3_backup", STORAGE_KEY + "_backup"],
+    ["endzeitspiel_help_dismissed_v1", HELP_DISMISS_KEY],
+  ];
+  const LEGACY_STORAGE_KEYS = ["endzeitspiel_prototype_v1", "endzeitspiel_prototype_v2"]; // Durchgang 6: v1/v2 werden beim Start ignoriert und entfernt (wie bisher)
+  /** Umbenennung: fehlt der neue Schlüssel, wird der alte kopiert. Der alte bleibt als Sicherung stehen. */
+  function migrateStorageKeys() {
+    RENAMED_STORAGE_KEYS.forEach(([oldKey, newKey]) => {
+      try {
+        if (localStorage.getItem(newKey) != null) return;
+        const v = localStorage.getItem(oldKey);
+        if (v != null) localStorage.setItem(newKey, v);
+      } catch (e) { /* kein Speicher – egal */ }
+    });
+  }
+  migrateStorageKeys(); // gleich beim Laden, damit auch der Hilfe-Merker übernommen ist
   const ATTRS = [
     "Ausdauer", "Ausstrahlung", "Dynamik", "Geschwindigkeit",
     "Intelligenz", "Kraft", "Wahrnehmung"
@@ -2301,6 +2318,7 @@
     log("Wanderer ist unterwegs.", "sys");
   }
   function enterGame() {
+    migrateStorageKeys(); // Umbenennung: alten Spielstand übernehmen (alter Schlüssel bleibt als Sicherung)
     LEGACY_STORAGE_KEYS.forEach((k) => { try { localStorage.removeItem(k); } catch (e) { /* egal */ } });
     const existing = load();
     if (existing && !saveIsDead(existing)) resumeGame(true);
@@ -4932,7 +4950,7 @@
   // =====================================================================
   // Müdigkeit / Energie / Verletzung / Schlafen / Tränke / Tiere
   // Quellen: Wiki 2015 (charakter/tiere, tranke-pillen-pilzmixe), Handbuch 2006
-  // (endzeit.pdf S.3, S.73, S.84), MoinMoin 2006 (Strahlung, StartHilfe).
+  // (Handbuch 2006 S.3, S.73, S.84), MoinMoin 2006 (Strahlung, StartHilfe).
   // Jede Zahl ist als WIKI oder DESIGN markiert. DESIGN ist NICHT original.
   // =====================================================================
   const EXHAUST_MSG = "Du bist zu erschöpft. Leg dich schlafen.";
@@ -9936,7 +9954,7 @@
   };
 
   // ===================================================================================================
-  // Durchgang 10 – Begleitroboter „Optimus“. ALLES DESIGN: nicht aus dem Original-Endzeitspiel
+  // Durchgang 10 – Begleitroboter „Optimus“. ALLES DESIGN: nicht aus dem Originalspiel
   // (Anspielung auf Teslas Optimus). Eigener Begleiter-Platz neben den Tieren, die Tiere bleiben unverändert.
   // ===================================================================================================
   var p10RightOnly = false;
@@ -10551,7 +10569,7 @@
   function p10PageHtml() {
     const s = state; const o = p10O(s); const now = Date.now(); const st = p10Status(o, now); const lvl = p10Lvl(o); const ab = p10Abil(o);
     let h = '<div class="p10-page"><h2>Optimus – dein Begleitroboter</h2>';
-    h += '<p class="p10-design">DESIGN: Optimus gibt es im Original-Endzeitspiel nicht (Anspielung auf Teslas Optimus). Er ist ein Begleiter wie ein Tier, hat aber einen eigenen Platz – deine Tiere bleiben.</p>';
+    h += '<p class="p10-design">DESIGN: Optimus gibt es im Originalspiel nicht (Anspielung auf Teslas Optimus). Er ist ein Begleiter wie ein Tier, hat aber einen eigenen Platz – deine Tiere bleiben.</p>';
     if (OPTIMUS_TEST_GRANT) h += '<p class="p10-test">Testmodus: Jeder Charakter bekommt Optimus sofort voll repariert, ohne Kauf.</p>';
     if (o.away && now - o.away.at < 30 * 60000) h += '<div class="p10-away"><b>Während du weg warst</b><p>' + origEsc(o.away.text.replace(/^Während du weg warst /, "")) + '</p><a href="#" data-x="p10away">ok</a></div>';
     h += '<div class="p10-top"><img class="p10-big" src="' + P10_IMG + (o.stage >= 5 ? "optimus.png" : "optimus-wrack.png") + '" alt="Optimus" width="220" height="220" /><div class="p10-stats">';

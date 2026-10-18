@@ -1,16 +1,16 @@
-# Endzeitspiel — Prototyp-Status (Single-Player)
+# Weltuntergangs-Spiel — Prototyp-Status (Single-Player)
 
 Stand: 2026-09-30 (Europe/Vienna) · Pause für User-Testing
 
 ## Schnellstart
 
 ```bash
-cd /workspace/endzeitspiel/prototype && python3 -m http.server 8765
+cd prototype && python3 -m http.server 8765
 ```
 
-Im Browser öffnen. **Hilfe**-Button (Header / HUD) · erste Anzeige per Overlay (Flag `endzeitspiel_help_dismissed_v1`). Spielstand: `localStorage` Key `endzeitspiel_prototype_v3` (Autosave). Alte Stände `endzeitspiel_prototype_v1` und `_v2` werden beim Start gelöscht und nicht geladen (Durchgang 6: frischer Charakter). Ohne Stand startet das Spiel still als neuer Charakter.
+Im Browser öffnen. **Hilfe**-Button (Header / HUD) · erste Anzeige per Overlay (Flag `weltuntergangs_spiel_help_dismissed_v1`). Spielstand: `localStorage` Key `weltuntergangs_spiel_v3` (Autosave; der Stand unter dem alten Schlüssel aus der Zeit vor der Umbenennung wird beim Start übernommen und bleibt als Sicherung). Alte Stände v1 und v2 werden beim Start gelöscht und nicht geladen (Durchgang 6: frischer Charakter). Ohne Stand startet das Spiel still als neuer Charakter.
 
-Archiv: `/workspace/endzeitspiel-prototype.tar.gz` (enthält `prototype/`, `DESIGN.md`, `STATUS.md`).
+Archiv: `/workspace/weltuntergangs-spiel-prototype.tar.gz` und `.zip` (Ordner `weltuntergangs-spiel/` mit `prototype/`, `docs/`, `tests/`).
 
 ---
 
@@ -134,9 +134,9 @@ Tests: `smoke-pass6.js` (33 Prüfungen). Browser-Playtest: `node tests/playtest-
 
 ## PWA / Mobil (Okt 2026)
 
-- **Installierbar als Web-App:** `manifest.webmanifest` (Name „Endzeitspiel“, Kurzname „Endzeit“, schwarz/gold, `standalone`, Hoch- und Querformat), Icons in `icons/` (192/512, maskable, Apple-Touch-Icon; goldenes Knoten-Dreieck aus dem Kopf), Meta-Tags viewport/theme-color/apple-touch-icon.
+- **Installierbar als Web-App:** `manifest.webmanifest` (Name „Weltuntergangs-Spiel“, Kurzname „Weltuntergang“, schwarz/gold, `standalone`, Hoch- und Querformat), Icons in `icons/` (192/512, maskable, Apple-Touch-Icon; goldenes Knoten-Dreieck aus dem Kopf), Meta-Tags viewport/theme-color/apple-touch-icon.
 - **Offline:** `sw.js` legt alle Spieldateien in den Cache (`VERSION` = `ezs-pwa-1`). HTML/JS/CSS/Manifest: Netz zuerst, Cache als Rückfall; Bilder: Cache zuerst. **Bei jeder neuen Version `VERSION` in sw.js hochzählen und `?v=` in index.html erhöhen.** Angemeldet wird der Service Worker in `pwa.js` (nur bei http/https, nicht bei file://).
-- **Spielstand** bleibt in `localStorage`, Schlüssel unverändert `endzeitspiel_prototype_v3`.
+- **Spielstand** bleibt in `localStorage`, Schlüssel `weltuntergangs_spiel_v3` (bis zur Umbenennung hieß er anders; der alte Stand wird beim Start übernommen).
 - **Mobile Ansicht unter 800 px** (`mobile.js` + Block am Ende von `styles.css`, DESIGN): Kopfleiste mit EP, Müdigkeit, Energie, Strahlung, Essen, Wasser, Gold (Tipp öffnet Spielerinfo/Ressourcen); unten 5 Reiter Nachrichten · Charakter · Aktionen · Community · Res./Stamm, die die Menügruppen als Schublade öffnen (2 Spalten, Einträge ≥ 44 px, schließt nach Auswahl oder Tipp daneben). Inhalt volle Breite, Links im Inhalt ≥ 44 px hoch, Tabellen scrollen in sich, Karte wischbar mit 44-px-Feldern und zentriert auf „Du“, Balken volle Breite. `mobile.js` liest nur das gerenderte DOM, app.js ist dafür unverändert. Über 800 px bleibt das Desktop-Layout pixelgleich (im Test geprüft).
 - **Lokal hosten:** `python3 tools/serve-pwa.py 8765` im Ordner prototype. Für das Handy braucht es HTTPS, z. B. `cloudflared tunnel --url http://localhost:8765` (temporäre trycloudflare-Adresse, kein Konto) oder dauerhaft GitHub Pages / Netlify / Cloudflare Pages.
 - **Test:** `node tests/playtest-pwa/mobile.js` (Pixel 7, 412×915, Touch): Service Worker, Cache, Manifest, Installierbarkeit (Chrome), Icons, Offline-Start, alle Menüpunkte über die Reiter (frisch und mit Stamm), keine Überbreite, Tipp-Ziele, Karte, Balken, Desktop unverändert. Screenshots in `playtest-pwa/`.
@@ -173,16 +173,16 @@ Live unter **https://unexist2010.github.io/endzeitspiel/** (Repo `unexist2010/en
 - **Weitere Kapitel**: K2 Aufgabe 1 jetzt „einmal handeln“ (Wasser steckt in K1); K3 Aufgabe 4 jetzt „Mutierten Plünderer besiegen“ (Metall steckt in K1); K6/K10 Steinhaus-Hinweise: erst sammeln, dann einreißen (kein Upgrade); K9 Forschen-Hinweis nennt den Ort (Ruinencamp), Forschung-Seite verlinkt die Reise dorthin. Hausbau (DESIGN): der Inhalt des alten Lagers zählt beim Neubau mit – sonst passt das große Steinhaus (1000 Rohstoffe) nicht in den Rucksack (600).
 - **Durchspiel-Test**: `node tests/walk-chapters.js [--seed N]` spielt alle 10 Kapitel als frischer Charakter nur über Links auf den Seiten (virtuelle Uhr, keine Cheats) – grün mit Seeds 7, 1, 2, 3, 42 (ca. 1 780–2 150 Klicks, 112–168 Spielminuten).
 - **Tests**: `node tests/smoke-pass8.js`, `node tests/playtest-pass8/p8.js` (Chrome Desktop 1366 + Handy 412×915, in `run-all.js`). `tests/harness-virt.js` (virtuelle Uhr). Alte Node-Tests laufen mit `EZS_FAST_TRAVEL`.
-- Version: Service-Worker-Cache `ezs-pwa-7`, `?v=13`. Spielstand-Schlüssel bleibt `endzeitspiel_prototype_v3` (kein Save-Break).
+- Version: Service-Worker-Cache `ezs-pwa-7`, `?v=13`. Spielstand-Schlüssel blieb v3 (kein Save-Break; heute `weltuntergangs_spiel_v3`).
 
 ## Speichern & Migration
 
 - Autosave nach Reisen, AGs, Kampf, Craft, Quests, Needs-Tick, Karma-Aktionen.
 - Manuell: Button **Speichern** (Anzeige „Gespeichert“).
 - Alte Stände werden in `migrateState` ergänzt (Karma, Stamm, Quests, TL).
-- Durchgang 4: **Save-Break** — Schlüssel jetzt `endzeitspiel_prototype_v2`, `endzeitspiel_prototype_v1` wird beim Start gelöscht. „Charakter zurücksetzen“ (Status/Übersicht) löscht den Stand nach Rückfrage und startet einen neuen Standard-Charakter.
+- Durchgang 4: **Save-Break** — Schlüssel jetzt v2, v1 wird beim Start gelöscht. „Charakter zurücksetzen“ (Status/Übersicht) löscht den Stand nach Rückfrage und startet einen neuen Standard-Charakter.
 - Durchgang 5: **kein Save-Break**, Schlüssel bleibt v2. Nur neue Felder (Bauauftrag, Zähler bep/sep/dep, Fallen, Funk, Biolevel); `migrateState` ergänzt sie und benennt „Diamantdetektor“ in „Diamantendetektor“ um.
-- Durchgang 6: **Save-Break** — Schlüssel `endzeitspiel_prototype_v3`, v1 und v2 werden beim Start gelöscht. Zurücksetzen funktioniert unverändert.
+- Durchgang 6: **Save-Break** — Schlüssel v3 (heute `weltuntergangs_spiel_v3`), v1 und v2 werden beim Start gelöscht. Zurücksetzen funktioniert unverändert.
 - PWA: kein Save-Break, Schlüssel bleibt v3.
 
 ---
@@ -202,3 +202,9 @@ Live unter **https://unexist2010.github.io/endzeitspiel/** (Repo `unexist2010/en
 ## Feedback erwünscht
 
 Balance (Needs/Kampf/TL), fehlende Wiki-Schritte, UX der Hilfe/Karte. Bugs bitte mit ungefährem Ablauf + Browser nennen.
+
+## Umbenennung (18.10.2026)
+- Neuer Projekttitel **Weltuntergangs-Spiel** (Kurzname „Weltuntergang“ im Manifest/Home-Bildschirm). Repo und Adresse behalten aus technischen Gründen den alten Namen (installierte App); Hinweis in `README.md`.
+- Spielstand-Schlüssel jetzt `weltuntergangs_spiel_v3` (+ `_backup`, Hilfe-Merker `weltuntergangs_spiel_help_dismissed_v1`). Beim Start wird ein vorhandener alter Stand übernommen, wenn der neue Schlüssel fehlt; der alte bleibt als Sicherung liegen (Konstante `RENAMED_STORAGE_KEYS` in app.js). Test: `tests/smoke-rename.js`.
+- Service Worker `wus-pwa-13`, `?v=19`; alte `ezs-pwa-*`-Caches werden beim Aktivieren gelöscht, fremde Caches auf github.io bleiben unberührt.
+- Archive: `/workspace/weltuntergangs-spiel-prototype.tar.gz` / `.zip` (Ordner `weltuntergangs-spiel/`).
