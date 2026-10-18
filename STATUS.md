@@ -191,6 +191,7 @@ Live unter **https://unexist2010.github.io/endzeitspiel/** (Repo `unexist2010/en
 - Nahrung/Wasser sind der Vorrat (inv.Nahrung/inv.Wasser = Bedarf), automatisch verbraucht, kein „Essen und Trinken“ mehr; Warnung ab ≤ 20. Migration alter Stände ×8 je Stück (Schlüssel v3, nichts gelöscht).
 - Neuer Menüpunkt Aktionen → Nahrungssuche: Sammeln je Gelände (Wald/Oase viel, Wüste/Ruinen wenig), Beifunde, Angriffe, Jagd auf Wilden Hund, Wildschwein, Echse, Ratte; „Was dieses Feld bietet“, Verlauf 20.
 - Wilder Hund 14–22 Nahrung je Sieg (vorher Ø ≈ 8). Details: NOTES-pass9.md. sw ezs-pwa-8, ?v=14.
+- Hotfix 9.1: Nachholen nach Abwesenheit höchstens 30 Minuten; dadurch gestorbene Stände werden beim Laden wiederbelebt; tote Stände mit Fortschritt werden nie still ersetzt (Todesfenster mit Wiederbeleben/Neu). sw ezs-pwa-9, ?v=15.
 
 ## Feedback erwünscht
 

@@ -1051,3 +1051,6 @@ details.p7-ch li.locked { opacity: 0.7; }
 }
 .p7-art.p9-art { width: 150px; image-rendering: auto; }
 @media (max-width: 760px) { .p7-art.p9-art { width: 110px; max-height: 110px; } }
+/* Hotfix 9.1: Todesfenster mit Auswahl */
+.dead-overlay .box .btn { display: block; width: 100%; min-height: 44px; margin: 8px 0 0; }
+.dead-overlay .dead-keep { color: #cfc6a8; font-size: 0.95em; }

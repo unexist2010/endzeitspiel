@@ -2282,6 +2282,7 @@
   }
   function bootDefault() {
     diedThisSession = false;
+    try { const old = localStorage.getItem(STORAGE_KEY); if (old) localStorage.setItem(STORAGE_KEY + "_backup", old); } catch (e) { /* egal */ } // Hotfix 9.1: alten Stand sichern
     const attrs = {};
     ATTRS.forEach((a) => { attrs[a] = 1; });
     attrs.Wahrnehmung += 2;
@@ -2303,6 +2304,7 @@
     LEGACY_STORAGE_KEYS.forEach((k) => { try { localStorage.removeItem(k); } catch (e) { /* egal */ } });
     const existing = load();
     if (existing && !saveIsDead(existing)) resumeGame(true);
+    else if (existing && p91HasProgress(existing)) p91ShowDead(existing); // Hotfix 9.1: toter Stand mit Fortschritt wird nie still ersetzt
     else bootDefault();
   }
   function startGame() {
@@ -2332,6 +2334,7 @@
     if (!state) return;
     showGame();
     log(auto ? "Spielstand automatisch geladen." : "Spielstand geladen.", "sys");
+    p91AfterLoad();
   }
   function showLogin() { enterGame(); }
   function showCreate() { bootDefault(); }
@@ -4507,6 +4510,7 @@
   function startNeeds() {
     stopNeeds();
     needsTimer = setInterval(() => {
+      p91Heartbeat(); // Hotfix 9.1: Seite war eingefroren/zu → Nachholen deckeln
       if (state && !state.dead && (tickPendingMix() | tickBoosts())) { save({ quiet: true }); renderAll(); }
       if (!state || state.dead || busy) return;
       const now = Date.now();
@@ -4560,7 +4564,7 @@
   function checkDeath() {
     if (!state || state.dead) return;
     if (state.food <= -10 || state.water <= -10) {
-      state.dead = true;
+      state.dead = true; state.deathCause = "spiel"; state.deathAt = Date.now();
       diedThisSession = true;
       log("Du bist verhungert oder verdurstet (−10).", "bad");
       const deadOv = document.getElementById("dead-overlay");
@@ -4806,9 +4810,12 @@
       clearSave(); state = null; bootDefault();
     }
   });
+  const btnRevive = document.getElementById("btn-dead-revive");
+  if (btnRevive) btnRevive.addEventListener("click", (e) => { e.preventDefault(); p91Revive(); });
   const btnDead = document.getElementById("btn-dead-restart");
   if (btnDead) btnDead.addEventListener("click", (e) => {
     e.preventDefault();
+    if (state && p91HasProgress(state) && !confirm("Wirklich neu anfangen? Der alte Charakter (" + (state.name || "") + ", " + (state.ep || 0) + " EP) wird gelöscht. Eine Sicherung bleibt unter „" + STORAGE_KEY + "_backup“.")) return;
     clearSave();
     state = null;
     diedThisSession = false;
@@ -9751,6 +9758,92 @@
     return p9ExtCmd(cmd);
   };
   window.__p9 = { P9_TERRAIN, p9TerrainKey, p9Supply };
+
+  // =====================================================================
+  // Hotfix 9.1 (18.10.2026): Nachholen nach Abwesenheit gedeckelt, tote Stände durch diesen Fehler wiederbelebt.
+  // Fehler: lastNeedsAt holte beim Öffnen ALLE verpassten Minuten nach (26 h zu → −1572 Nahrung → tot), und enterGame()
+  // ersetzte tote Stände still durch einen neuen Wanderer.
+  // =====================================================================
+  const P91_OFFLINE_MAX = 30 * 60000; // DESIGN: höchstens 30 Minuten Bedarf/Strahlung/Tier-Drift nach Abwesenheit
+  let p91Beat = 0;
+  /** Beim Laden: Drift auf 30 Minuten deckeln (lange Aktionen/Bauten laufen weiter nach echter Zeit). */
+  function p91CapLoad(s, now) {
+    if (!s || typeof s.lastNeedsAt !== "number") return 0;
+    const floor = now - P91_OFFLINE_MAX;
+    if (s.lastNeedsAt >= floor) return 0;
+    const skipped = Math.floor((floor - s.lastNeedsAt) / 60000);
+    s.lastNeedsAt = floor;
+    return skipped;
+  }
+  /** Läuft bei jedem Bedarf-Takt: lag eine Lücke dazwischen (Handy im Hintergrund, Tab eingefroren), wird sie gedeckelt. */
+  function p91Heartbeat() {
+    const now = Date.now();
+    if (state && p91Beat && typeof state.lastNeedsAt === "number" && now - p91Beat > 2 * 60000) {
+      const excess = now - p91Beat - P91_OFFLINE_MAX;
+      if (excess > 0) {
+        state.lastNeedsAt = Math.min(now, state.lastNeedsAt + excess);
+        log("Lange weg gewesen: nur die letzten 30 Minuten zählen für Nahrung und Wasser.", "sys");
+      }
+    }
+    p91Beat = now;
+  }
+  function p91HasProgress(s) {
+    return !!(s && ((s.ep || 0) > 0 || (s.techlevel || 0) > 0 || s.house || s.stamm || Object.keys(s.kills || {}).length));
+  }
+  /** Tot durch das Nachholen? Alte Stände kennen keine Todesursache; im Spiel endet der Tod bei −10 bis −12. */
+  function p91OfflineDeath(s) {
+    if (!s) return false;
+    const low = Math.min(s.food, s.water);
+    if (!(s.dead || low <= -10)) return false;
+    if (s.deathCause === "spiel") return false;
+    return low < -10 || s.deathCause === "nachholen";
+  }
+  function p91ReviveState(s, why) {
+    s.food = Math.max(s.food, 30); s.water = Math.max(s.water, 30);
+    s.dead = false; delete s.deathCause; delete s.deathAt;
+    s.lastNeedsAt = Date.now();
+    s.p91note = why;
+    s.p91revived = (s.p91revived || 0) + 1;
+  }
+  const p91MigrateBase = migrateState;
+  migrateState = function (s) {
+    const r = p91MigrateBase(s) || s;
+    const now = Date.now();
+    const skipped = p91CapLoad(r, now);
+    if (skipped > 0) r.p91skipped = skipped;
+    if (p91OfflineDeath(r)) p91ReviveState(r, "abwesenheit");
+    return r;
+  };
+  function p91AfterLoad() {
+    const s = state; if (!s) return;
+    p91Beat = Date.now();
+    if (s.p91skipped && !s.p91note) { const m = "Willkommen zurück. Für die Abwesenheit zählen nur 30 Minuten Nahrung und Wasser (statt " + (s.p91skipped + 30) + ")."; log(m, "sys"); showResult(m); }
+    delete s.p91skipped;
+    if (s.p91note) {
+      const msg = s.p91note === "abwesenheit" ? "Dein Charakter wurde nach langer Abwesenheit wiederbelebt. Nahrung " + s.food + ", Wasser " + s.water + " – EP, Gegenstände und alles andere sind erhalten." : "Dein Charakter wurde wiederbelebt. Nahrung " + s.food + ", Wasser " + s.water + ".";
+      delete s.p91note;
+      log(msg, "good"); showResult(msg);
+    }
+    save({ quiet: true }); renderAll();
+  }
+  /** Wirklich toter Stand mit Fortschritt: laden und das Todesfenster mit Auswahl zeigen (nichts löschen). */
+  function p91ShowDead(s) {
+    state = s; diedThisSession = true;
+    showGame();
+    log("Dein Charakter ist tot (Nahrung oder Wasser bei −10). Du kannst ihn wiederbeleben oder neu anfangen.", "bad");
+    renderAll();
+    const ov = document.getElementById("dead-overlay"); if (ov) ov.classList.remove("hidden");
+  }
+  /** DESIGN: Wiederbeleben kostet die Hälfte des Golds; EP und Gegenstände bleiben. */
+  function p91Revive() {
+    const s = state; if (!s || !s.dead) return;
+    const lost = Math.floor((s.gold || 0) / 2); s.gold = (s.gold || 0) - lost;
+    p91ReviveState(s, "spiel");
+    diedThisSession = false;
+    const ov = document.getElementById("dead-overlay"); if (ov) ov.classList.add("hidden");
+    p91AfterLoad();
+    if (lost) log("Wiederbelebung: −" + lost + " Gold.", "bad");
+  }
 
   document.addEventListener("keydown", (e) => {
     if (!state || state.dead || busy) return;
