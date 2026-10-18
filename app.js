@@ -169,9 +169,9 @@
       img: "assets/gfx/animals/hund.gif",
       kp: 14, hp: 10, roundsMax: 5,
       reward: { ep: 2, cp: 1, kep: 2 },
+      food: [14, 22], animal: true, // Durchgang 9 (DESIGN): Fleisch immer, vorher 50 % × 1–3 Stück (≈ 8 Bedarf)
       loot: [
-        { item: "Nahrung", n: [1, 3], w: 50 },
-        { item: "Knochen", n: [1, 2], w: 30 },
+        { item: "Knochen", n: [1, 2], w: 60 },
         { item: "Kronkorken", n: [1, 2], w: 20 },
       ],
     },
@@ -184,8 +184,8 @@
       loot: [
         { item: "Metall", n: [1, 3], w: 40 },
         { item: "Kronkorken", n: [2, 4], w: 35 },
-        { item: "Nahrung", n: [1, 2], w: 25 },
       ],
+      food: [4, 8], // Durchgang 9 (DESIGN): Vorräte des Plünderers
     },
     raider: {
       id: "raider",
@@ -196,9 +196,9 @@
       loot: [
         { item: "Metall", n: [2, 5], w: 35 },
         { item: "Kronkorken", n: [2, 5], w: 30 },
-        { item: "Nahrung", n: [2, 4], w: 20 },
         { item: "Kunststoff", n: [1, 3], w: 15 },
       ],
+      food: [6, 12], // Durchgang 9 (DESIGN)
     },
     rival_scout: {
       id: "rival_scout",
@@ -210,8 +210,8 @@
         { item: "Metall", n: [2, 4], w: 30 },
         { item: "Holz", n: [3, 6], w: 30 },
         { item: "Kronkorken", n: [2, 5], w: 25 },
-        { item: "Nahrung", n: [2, 4], w: 15 },
       ],
+      food: [6, 12], // Durchgang 9 (DESIGN)
     },
   };
 
@@ -316,7 +316,7 @@
     wasser: {
       label: "Wasser suchen", icon: "Wasser", duration: 3000,
       run(state) {
-        const n = rand(3, 8); addInv(state, "Wasser", n); gain(state, 1, 0);
+        const n = rand(12, 30); addInv(state, "Wasser", n); // Durchgang 9: Einheiten = Vorrat (vorher 3–8 Stück à 8) gain(state, 1, 0);
         return { ok: true, msg: `Du schöpfst ${n} Wasser.` };
       },
     },
@@ -423,7 +423,7 @@
         const loot = weighted([
           { item: "Kronkorken", n: rand(1, 4), w: 40 },
           { item: "Metall", n: rand(1, 3), w: 25 },
-          { item: "Nahrung", n: rand(1, 2), w: 20 },
+          { item: "Nahrung", n: rand(5, 10), w: 20 },
           { item: "Schriftrolle", n: 1, w: 5 },
           { item: "Goldnugget", n: 1, w: 10 },
         ]);
@@ -678,7 +678,7 @@
         if (state.buildings && state.buildings.kraeutergarten) n += 2;
         addInv(state, "Kräuter", n);
         // Direktverzehr möglich — auch etwas Nahrung
-        addInv(state, "Nahrung", rand(1, 2));
+        addInv(state, "Nahrung", rand(4, 8));
         gain(state, 2, 1);
         return { ok: true, msg: `Ernte: ${n} Kräuter (+ etwas Nahrung). NV-Flavor.` };
       },
@@ -909,9 +909,9 @@
     {
       id: "notverpflegung",
       label: "Notverpflegung",
-      desc: "3 Holz + 2 Wasser → 1 Nahrung (DESIGN)",
+      desc: "3 Holz + 2 Wasser → 10 Nahrung (DESIGN, Durchgang 9: Einheiten = Vorrat)",
       cost: { Holz: 3, Wasser: 2 },
-      result: { Nahrung: 1 },
+      result: { Nahrung: 10 },
       minTL: 0,
     },
     {
@@ -1120,9 +1120,9 @@
     {
       id: "pilzmix",
       label: "Pilzmix (Snack)",
-      desc: "3 Pilze → 2 Nahrung (DESIGN).",
+      desc: "3 Pilze → 16 Nahrung (DESIGN).",
       cost: { Pilze: 3 },
-      result: { Nahrung: 2 },
+      result: { Nahrung: 16 },
       minTL: 5,
       needJob: "Chemiker",
     },
@@ -1270,8 +1270,8 @@
     { item: "Sand", buy: 1, sell: 1 },
     { item: "Öl", buy: 4, sell: 2 },
     { item: "Gas", buy: 4, sell: 2 },
-    { item: "Wasser", buy: 3, sell: 1 },
-    { item: "Nahrung", buy: 3, sell: 1 },
+    { item: "Wasser", buy: 1, sell: 0 }, // Durchgang 9 (DESIGN): 1 Gold je Vorrat-Einheit, kein Rückkauf
+    { item: "Nahrung", buy: 1, sell: 0 },
     { item: "Erz", buy: 3, sell: 2 },
     { item: "Kristall", buy: 5, sell: 3 },
     { item: "Kronkorken", buy: 2, sell: 1 },
@@ -1421,7 +1421,7 @@
       desc: "Erkunde eine Anfängerhöhle und hole den Wiki-Bonus (+75 EP/CP).",
       check(s) { return Object.keys(s.cavesVisited || {}).length >= 1; },
       progress(s) { return `${Object.keys(s.cavesVisited || {}).length}/1 Höhlen`; },
-      reward: { ep: 10, cp: 10, gold: 15, inv: { Nahrung: 3, Wasser: 3 } }, // DESIGN extras
+      reward: { ep: 10, cp: 10, gold: 15, inv: { Nahrung: 25, Wasser: 25 } }, // DESIGN extras (Durchgang 9: Vorrat-Einheiten)
     },
     {
       id: "holz_lieferung",
@@ -1438,7 +1438,7 @@
       desc: "Besiege 2 Wilde Hunde (Waldstück/Oase oder Zufallsbegegnung).",
       check(s) { return (s.kills.wild_dog || 0) >= 2; },
       progress(s) { return `${Math.min(2, s.kills.wild_dog || 0)}/2 Hunde`; },
-      reward: { ep: 12, cp: 8, gold: 10, inv: { Nahrung: 5 } }, // DESIGN
+      reward: { ep: 12, cp: 8, gold: 10, inv: { Nahrung: 40 } }, // DESIGN (Durchgang 9: Vorrat-Einheiten)
     },
     {
       id: "zum_licht",
@@ -1736,7 +1736,7 @@
       name: name.slice(0, 24),
       lagerLevel: 0,
       wall: false,
-      storage: { Nahrung: 10, Wasser: 10, Holz: 5 },
+      storage: { Nahrung: 80, Wasser: 80, Holz: 5 },
       gold: 0,
       members: STAMM_NPC_TEMPLATES.map((t) => ({
         id: t.id, name: t.name, flavor: t.flavor, assignment: "none",
@@ -2218,12 +2218,8 @@
         lootMsg = `${added}× ${drop.item} → Stammlager (+10 Stamm-Gold)`;
       } else {
         addInv(state, drop.item, drop.n);
-        const wolf = activePet(state);
-        if (wolf && wolf.type === "Wolf" && drop.item === "Nahrung") { // WIKI: bis zur doppelten Menge Fleisch (PSI: doppelt)
-          const extra = wolf.psi ? drop.n : Math.floor(drop.n * Math.min(1, wolf.groesse / 200) + 0.5);
-          if (extra > 0) { addInv(state, "Nahrung", extra); lootMsg += " + " + extra + " Nahrung vom Wolf"; }
-        }
       }
+      lootMsg += p9FightFood(e); // Durchgang 9: Fleisch/Vorräte direkt in den Nahrungsvorrat
       lootMsg += tryNetCapture(e.id);
       if (fight.tag) { const qm = questFightWon(fight.tag); if (qm) lootMsg += ". " + qm.replace(/\.$/, ""); }
       const msg = "Sieg gegen " + e.name + ". +" + r.ep + " EP. " + lootMsg + ".";
@@ -2236,7 +2232,7 @@
       const goldLoss = Math.min(state.gold, Math.max(3, Math.floor(state.gold * 0.25)));
       state.gold -= goldLoss; state.food -= 3; state.water -= 3;
       state.ep += 1; state.cp += 1; state.kep = (state.kep || 0) + 1;
-      const msg = "Niederlage gegen " + e.name + ". −" + goldLoss + " Gold.";
+      const msg = "Niederlage gegen " + e.name + ". −" + goldLoss + " Gold."; p9FightLost(e);
       fightLog(msg, "bad"); log(msg, "bad");
       showResult(msg, true);
       setStatus("Bereit.");
@@ -2447,6 +2443,7 @@
         ["jagen", "Jagen"],
         ["kaempfen", "Kämpfen"],
         ["landkarte", "Landkarte"],
+        ["nahrungssuche", "Nahrungssuche"],
         ["schlafen", "Schlafen"],
         ["uebertragen", "Übertragen"],
         ["wassersuche", "Wassersuche"],
@@ -2758,10 +2755,10 @@
         "<tr><td>Kreativität:</td><td>" + (state.kreativ || 0) + "</td></tr></table>" + resetHtml();
     }
     if (page === "rucksack") {
-      const owned = Object.keys(state.inv).filter((k) => state.inv[k] > 0);
+      const owned = Object.keys(state.inv).filter((k) => state.inv[k] > 0 && k !== "Nahrung" && k !== "Wasser"); // Durchgang 9: Vorrat steht oben extra
       const buckets = { Waffen: [], Kleidung: [], Ressourcen: [], Sonstiges: [] };
       owned.forEach((k) => buckets[itemBucket(k)].push(k));
-      let body = "<p>Vorrat im Rucksack ist, was du trägst. Bedarf rechts ist Nahrung und Wasser zum Überleben. Das sind zwei verschiedene Werte.</p><p>Gold: " + state.gold + "</p>";
+      let body = "<p>Gold: " + state.gold + "</p>";
       Object.keys(buckets).forEach((title) => {
         const names = buckets[title].sort((a, b) => a.localeCompare(b, "de"));
         if (!names.length) return;
@@ -2945,7 +2942,7 @@
       if (!loc || !loc.trade) return "<h2>Handeln</h2><p>Kein Händler hier.</p>";
       const rows = TRADE.filter((t) => tradeHere(t, loc)).map((t) => {
         const cur = t.payItem ? " " + t.payItem : " G";
-        const bulk = (t.payItem || t.item === "Wasser" || t.item === "Nahrung") ? "" : " " + origLink("151×", 'data-buy="' + origEsc(t.item) + '|151"');
+        const bulk = (t.item === "Wasser" || t.item === "Nahrung") ? " " + origLink("50×", 'data-buy="' + origEsc(t.item) + '|50"') : t.payItem ? "" : " " + origLink("151×", 'data-buy="' + origEsc(t.item) + '|151"');
         const sellPart = t.sell ? " · Verkauf " + sellPrice(t) + " G " + origLink("verkaufen", 'data-sell="' + origEsc(t.item) + '"') : "";
         return "<p>" + origEsc(t.item) + " — Kauf " + buyPrice(t) + cur + " " + origLink("kaufen", 'data-buy="' + origEsc(t.item) + '"') + " " + origLink("10×", 'data-buy="' + origEsc(t.item) + '|10"') + bulk + sellPart + "</p>";
       }).join("");
@@ -3116,8 +3113,8 @@
     }
     left.innerHTML = boxes(ORIG_MENUS.left);
     const res = [
-      ["wasser.gif", "Wasser (Bedarf)", state.water],
-      ["nahrung.gif", "Nahrung (Bedarf)", state.food],
+      ["wasser.gif", "Wasser", state.water, p9LowCls(state.water)],
+      ["nahrung.gif", "Nahrung", state.food, p9LowCls(state.food)],
       ["gold.gif", "Gold", state.gold],
       ["holz.gif", "Holz", state.inv.Holz || 0],
       ["stein.gif", "Stein", state.inv.Stein || 0],
@@ -3128,7 +3125,7 @@
       ["erz.gif", "Erz", state.inv.Erz || 0],
       ["edelmetall.gif", "Edelmetall", state.inv.Edelmetall || 0],
       ["kronkorken.gif", "Kronkorken", state.inv.Kronkorken || 0],
-    ].map(([ico, name, n]) => '<div class="resline"><span><img src="assets/rohstoffe/' + ico + '" alt="" />' + name + ":</span><span>" + n + "</span></div>").join("");
+    ].map(([ico, name, n, cls]) => '<div class="resline' + (cls ? " " + cls : "") + '"><span><img src="assets/rohstoffe/' + ico + '" alt="" />' + name + ":</span><span>" + n + "</span></div>").join("");
     const parts0 = new Intl.DateTimeFormat("de-AT", { timeZone: "Europe/Vienna", hour: "2-digit", minute: "2-digit", second: "2-digit", hourCycle: "h23" }).formatToParts(new Date());
     const g0 = (k) => (parts0.find((x) => x.type === k) || {}).value || "00";
     const hh = g0("hour");
@@ -3521,7 +3518,7 @@
     const step = chainStep(state, "tutorial");
     if (step >= 5 || !TUTORIAL_STEPS[step] || TUTORIAL_STEPS[step].ev !== ev) return;
     if (step === 0) { state.ep += 3; addInv(state, "Holz", 2); }
-    else if (step === 1) { state.ep += 3; addInv(state, "Wasser", 2); }
+    else if (step === 1) { state.ep += 3; addInv(state, "Wasser", 16); }
     else if (step === 2) { state.ep += 4; state.gold += 5; }
     else if (step === 3) { state.ep += 4; }
     else if (step === 4) { state.ep += 8; state.cp += 2; state.gold += 10; state.flags.tutorial_done = true; }
@@ -4183,10 +4180,9 @@
   }
 
   function consume(item) {
+    if (item === "Nahrung" || item === "Wasser") { log("Nahrung und Wasser sind dein Vorrat und werden automatisch verbraucht.", "sys"); return; } // Durchgang 9
     if (!takeInv(state, item, 1)) return;
-    if (item === "Nahrung") { state.food += 8; log("Du isst. Nahrung +8.", "good"); }
-    else if (item === "Wasser") { state.water += 8; log("Du trinkst. Wasser +8.", "good"); }
-    else if (item === "Heiltrank") {
+    if (item === "Heiltrank") {
       state.food += 15; state.water += 15;
       log("Heiltrank: Nahrung +15, Wasser +15 (DESIGN).", "good");
     } else if (item === "Antivirus" || item === "Bio-Serum") {
@@ -4550,7 +4546,7 @@
         if (stallMsg) log(stallMsg, "bad");
         const petMsg = tickPet(ticks);
         if (petMsg) { log(petMsg, state.pet ? "sys" : "bad"); if (!state.pet) showResult(petMsg, true); }
-        let msg = `Bedürfnisse: −${ticks} Nahrung/Wasser`;
+        let msg = `Vorrat: −${ticks} Nahrung/Wasser`;
         if (foodBonus || waterBonus) msg += ` · Gebäude +${foodBonus} N / +${waterBonus} W`;
         if (radUp) msg += ` · Strahlung +${radUp} (in Ruhe, DESIGN)`;
         log(msg + ".", "sys");
@@ -5319,9 +5315,9 @@
     if (!p) { showResult("Du hast kein Tier.", true); renderAll(); return; }
     if (sleepUi) { showResult(SLEEP_MSG, true); renderAll(); return; }
     let msg = "", bad = false;
-    const need = Math.max(1, Math.round(p.groesse / 100)); // DESIGN: größere Tiere fressen mehr (WIKI-Idee)
+    const need = 5 * Math.max(1, Math.round(p.groesse / 100)); // DESIGN: größere Tiere fressen mehr (WIKI-Idee); Durchgang 9: Vorrat-Einheiten
     if (kind === "feed" || kind === "feedx") {
-      if ((state.inv.Nahrung || 0) < need) { msg = "Du brauchst " + need + " Nahrung im Rucksack."; bad = true; }
+      if ((state.inv.Nahrung || 0) < need) { msg = "Du brauchst " + need + " Nahrung im Vorrat."; bad = true; }
       else if (kind === "feedx" && !(state.inv["Pilzmix-X"] > 0)) { msg = "Kein Pilzmix-X im Rucksack."; bad = true; }
       else {
         takeInv(state, "Nahrung", need);
@@ -5336,7 +5332,7 @@
         }
       }
     } else if (kind === "water") {
-      if ((state.inv.Wasser || 0) < need) { msg = "Du brauchst " + need + " Wasser im Rucksack."; bad = true; }
+      if ((state.inv.Wasser || 0) < need) { msg = "Du brauchst " + need + " Wasser im Vorrat."; bad = true; }
       else { takeInv(state, "Wasser", need); p.durst = Math.max(0, p.durst - 40); p.einst = clamp(p.einst - 1, -100, 100); msg = p.name + " trinkt. Durst " + p.durst + "%."; }
     } else if (kind === "play") {
       if (p.sleeping) { msg = p.name + " schläft. Wecken geht nur mit Pilzmix-X."; bad = true; }
@@ -6379,7 +6375,7 @@
   function petStallFeed(i) {
     const s = state; const p = (s.stallPets || [])[i];
     if (!p) return "Kein Tier.";
-    const need = Math.max(1, Math.round(p.groesse / 100));
+    const need = 5 * Math.max(1, Math.round(p.groesse / 100));
     if (!has(s, "Nahrung", need) || !has(s, "Wasser", need)) return "Du brauchst " + need + " Nahrung und " + need + " Wasser.";
     takeInv(s, "Nahrung", need); takeInv(s, "Wasser", need);
     p.hunger = Math.max(0, p.hunger - 40); p.durst = Math.max(0, p.durst - 40);
@@ -8346,6 +8342,7 @@
     const s = state;
     if (!s || s.dead) return "";
     if (item !== "Nahrung" && item !== "Wasser") return "";
+    { const m = "Nahrung und Wasser sind dein Vorrat und werden automatisch verbraucht – kein Essen oder Trinken nötig."; showResult(m); renderAll(); return m; } // Durchgang 9
     const have = s.inv[item] || 0;
     const k = Math.min(have, Math.max(1, n || 1));
     if (k <= 0) { showResult("Kein " + item + " im Rucksack.", true); renderAll(); return ""; }
@@ -8377,7 +8374,7 @@
   const p6RenderOrigPage = renderOrigPage;
   renderOrigPage = function () {
     let h = p6RenderOrigPage();
-    if (origPage === "rucksack" && state) h = h.replace("</h2>", "</h2>" + p6EatHtml());
+    if (origPage === "rucksack" && state) h = h.replace("</h2>", "</h2>" + p9SupplyHtml()); // Durchgang 9: Vorrat statt „Essen und Trinken“
     if (origPage === "handeln" && state && h.indexOf("Kein Händler hier.") >= 0) h = h.replace("Kein Händler hier.</p>", "Kein Händler hier.</p>" + p6TradeHint());
     if (origPage === "landkarte" && state) h += p6NearbyHtml();
     if (origPage === "landkarte" && state && state.locId !== "camp") h += '<p>Schnellreise (DESIGN): ' + origLink("zum Ruinencamp", 'data-loc="camp"') + " · reist über die Felder, kostet Zeit und Bedarf wie jede Reise.</p>";
@@ -8619,12 +8616,13 @@
       { id: "k1_stein", l: "Sammle 30 Stein", g: { t: "inv", k: "Stein", n: 30 }, h: "Im Steinbruch (85/110) unter Arbeiten „Stein abbauen“.", loc: "bruch", page: "arbeiten" },
       { id: "k1_waffen", l: "Stelle einen Stock und einen Stock mit Stein her", g: { t: "crafts", ids: ["stock", "stock_stein"] }, h: "Herstellen → Stock (10 Holz, +8 Kampfpunkte), danach Stock mit Stein (10 Holz, 10 Stein, +16 Kampfpunkte). Danach öffnet sich das Schrottfeld.", page: "herstellen" },
       // Durchgang 8: Die Holzhütte braucht Kunststoff, Metall, Nahrung und Wasser. Vorher lernte Kapitel 1 nur Holz und Stein → Spieler steckten fest.
-      { id: "k1_vorrat", l: "Besorge Kunststoff, Metall und Vorräte für die Hütte", g: { t: "need", cost: { Kunststoff: 15, Metall: 20, Nahrung: 20, Wasser: 5 } }, h: "Kunststoff und Metall gibt es nicht im Wald oder Steinbruch, sondern auf dem Schrottfeld (60/120): dort unter Arbeiten „Kunststoff sammeln“ und „Metall sammeln“ (je 4–10 pro Gang). Das Schrottfeld öffnet sich, sobald die Aufgaben 1–3 erledigt sind. Wasser: in der Oase (40/95) „Wasser suchen“. Nahrung: Wilde Hunde im Waldstück (70/90) jagen oder Herstellen → Notverpflegung (3 Holz + 2 Wasser = 1 Nahrung). Notfalls beim Händler im Ruinencamp: Kunststoff 2 Gold, Nahrung 3 Gold.", loc: "schrott", page: "arbeiten" },
-      { id: "k1_huette", l: "Baue eine Holzhütte", g: { t: "house", id: "holzhuette" }, h: "Im Ruinencamp (50/100): Haus → Holzhütte „bauen“. Kosten 25 Holz, 15 Kunststoff, 20 Metall, 20 Nahrung, 5 Wasser. Iss vorher nicht die Nahrung für die Hütte auf.", loc: "camp", page: "haus", cost: { Holz: 25, Kunststoff: 15, Metall: 20, Nahrung: 20, Wasser: 5 } },
+      { id: "k1_vorrat", l: "Besorge Kunststoff, Metall und Vorräte für die Hütte", g: { t: "need", cost: { Kunststoff: 15, Metall: 20, Nahrung: 20, Wasser: 5 } }, h: "Kunststoff und Metall gibt es nicht im Wald oder Steinbruch, sondern auf dem Schrottfeld (60/120): dort unter Arbeiten „Kunststoff sammeln“ und „Metall sammeln“ (je 4–10 pro Gang). Das Schrottfeld öffnet sich, sobald die Aufgaben 1–3 erledigt sind. Nahrung und Wasser zählen aus deinem Vorrat (rechts). Wird er knapp: Nahrungssuche im Waldstück (70/90), Wilde Hunde jagen, Wassersuche an der Oase (40/95) oder beim Händler im Ruinencamp (1 Gold je Einheit). Kunststoff gibt es dort für 2 Gold.", loc: "schrott", page: "arbeiten" },
+      { id: "k1_huette", l: "Baue eine Holzhütte", g: { t: "house", id: "holzhuette" }, h: "Im Ruinencamp (50/100): Haus → Holzhütte „bauen“. Kosten 25 Holz, 15 Kunststoff, 20 Metall, 20 Nahrung, 5 Wasser. Nahrung und Wasser kommen aus deinem Vorrat (rechts) – behalte danach genug übrig.", loc: "camp", page: "haus", cost: { Holz: 25, Kunststoff: 15, Metall: 20, Nahrung: 20, Wasser: 5 } },
     ] },
     { t: "Versorgung und erster Kampf", tasks: [
       { id: "k2_handel", l: "Handle einmal beim Händler im Ruinencamp", g: { t: "cnt", k: "trade", n: 1 }, h: "Im Ruinencamp (50/100) unter Handeln etwas kaufen oder verkaufen. Der Händler kauft Rohstoffe an und verkauft Nahrung, Wasser, Kunststoff und Metall.", loc: "camp", page: "handeln" },
-      { id: "k2_essen", l: "Iss oder trink etwas aus dem Rucksack", g: { t: "cnt", k: "eat", n: 1 }, h: "Rucksack → Essen und Trinken. Füllt den Bedarf (rechts: Nahrung/Wasser).", page: "rucksack" },
+      // Durchgang 9: Essen/Trinken gibt es nicht mehr (Vorrat wird automatisch verbraucht) → Nahrungssuche
+      { id: "k2_nahrung", l: "Suche einmal Nahrung", g: { t: "cnt", k: "forage", n: 1 }, h: "Aktionen → Nahrungssuche → „Nahrung sammeln“. Im Waldstück (70/90) und an der Oase (40/95) findest du am meisten, in Wüste und Ruinen wenig. Alles geht direkt in deinen Vorrat (rechts).", loc: "wald", page: "nahrungssuche" },
       { id: "k2_hund", l: "Besiege einen Wilden Hund", g: { t: "kill", e: "wild_dog", n: 1 }, h: "Jagen oder Kämpfen. Wilde Hunde gibt es z. B. im Waldstück. Mit Stock mit Stein kämpfst du besser.", page: "jagen" },
       { id: "k2_schlaf", l: "Schlafe dich einmal aus", g: { t: "cnt", k: "sleep", n: 1 }, h: "Schlafen senkt Müdigkeit und füllt Energie. Im eigenen Haus schläfst du am sichersten.", page: "schlafen" },
       { id: "k2_hundejagd", l: "Löse die Quest „Hundejagd“ ein", g: { t: "quest", q: "hundejagd" }, h: "Besiege 2 Wilde Hunde und löse die Quest auf der Aufgaben-Seite unter „Nebenquests“ ein.", page: "aufgaben" },
@@ -8653,7 +8651,7 @@
     { t: "Vorräte und ein Steinhaus", tasks: [
       { id: "k6_lager", l: "Baue das Privatlager", g: { t: "lager" }, h: "Haus → Privatlager bauen (50 Holz, 50 Stein). Nur im Ruinencamp.", loc: "camp", page: "haus" },
       { id: "k6_einlagern", l: "Lagere 50 Holz im Privatlager ein", g: { t: "lagerN", k: "Holz", n: 50 }, h: "Haus → Lager → Holz einlagern. Was im Lager liegt, zählt im Ruinencamp beim Bauen mit.", loc: "camp", page: "haus" },
-      { id: "k6_notverpf", l: "Stelle eine Notverpflegung her", g: { t: "craft", id: "notverpflegung" }, h: "Herstellen → Notverpflegung (3 Holz, 2 Wasser) gibt 1 Nahrung.", page: "herstellen" },
+      { id: "k6_notverpf", l: "Stelle eine Notverpflegung her", g: { t: "craft", id: "notverpflegung" }, h: "Herstellen → Notverpflegung (3 Holz, 2 Wasser) gibt 10 Nahrung für den Vorrat.", page: "herstellen" },
       { id: "k6_tl2", l: "Erreiche Techlevel 2 (250 EP)", g: { t: "tl", n: 2 }, h: "Ab TL2: Erzader, Glasschmelze, Kräuterfeld und die Spitzhacke.", page: "status" },
       { id: "k6_steinhaus", l: "Baue ein kleines Steinhaus", g: { t: "house", id: "steinhaus_k" }, h: "Haus → kleines Steinhaus: 120 Holz, 25 Kunststoff, 100 Stein, 45 Metall, 40 Nahrung, 5 Wasser. Lager 10.000 je Rohstoff. Wiki: kein Upgrade — sammle zuerst alles (gern im Privatlager), dann Haus → „Haus einreißen“ und neu bauen. Der Lagerinhalt zählt beim Neubau mit, das Lager selbst baust du danach neu.", cost: { Holz: 120, Kunststoff: 25, Stein: 100, Metall: 45, Nahrung: 40, Wasser: 5 }, loc: "camp", page: "haus" },
     ] },
@@ -8787,7 +8785,7 @@
     if (changed) save({ quiet: true });
     return changed;
   }
-  const P7_PAGE_NAMES = { arbeiten: "Arbeiten", herstellen: "Herstellen", haus: "Haus", wassersuche: "Wassersuche", rucksack: "Rucksack", jagen: "Jagen", schlafen: "Schlafen",
+  const P7_PAGE_NAMES = { arbeiten: "Arbeiten", herstellen: "Herstellen", haus: "Haus", wassersuche: "Wassersuche", nahrungssuche: "Nahrungssuche", rucksack: "Rucksack", jagen: "Jagen", schlafen: "Schlafen",
     graben: "Graben", erkunden: "Erkunden", status: "Status", faehigkeiten: "Fähigkeiten", kaempfen: "Kämpfen", handeln: "Handeln", gruendung: "Stamm gründen",
     stammgeb: "Stammgebäude", forschung: "Forschung", landkarte: "Landkarte" };
   function p7TaskLinks(t) {
@@ -8883,12 +8881,12 @@
     if (acts.includes("holz")) return [["Holz", 1, 3, 5], ["Knochen", 1, 1, 1], ["Stein", 1, 1, 1]];
     if (acts.includes("stein")) return [["Stein", 1, 3, 5], ["Sand", 1, 2, 2], ["Kronkorken", 1, 1, 1]];
     if (acts.includes("metall") || acts.includes("kunststoff")) return [["Metall", 1, 2, 3], ["Kunststoff", 1, 2, 3], ["Kronkorken", 1, 3, 2]];
-    if (acts.includes("wasser")) return [["Wasser", 1, 2, 4], ["Holz", 1, 2, 1], ["Nahrung", 1, 1, 1]];
+    if (acts.includes("wasser")) return [["Wasser", 5, 12, 4], ["Holz", 1, 2, 1], ["Nahrung", 3, 6, 1]];
     if (acts.includes("sand")) return [["Sand", 2, 4, 5], ["Knochen", 1, 1, 1], ["Kronkorken", 1, 2, 1]];
     const g = groundAt(pos.x, pos.y);
     if (g === "hart") return [["Stein", 1, 2, 4], ["Metall", 1, 1, 1], ["Kronkorken", 1, 2, 1]];
     if (g === "glas") return [["Sand", 1, 3, 3], ["Kristall", 1, 1, 1]];
-    return [["Holz", 1, 2, 3], ["Stein", 1, 1, 2], ["Kronkorken", 1, 2, 2], ["Knochen", 1, 1, 1], ["Sand", 1, 2, 1], ["Nahrung", 1, 1, 1]];
+    return [["Holz", 1, 2, 3], ["Stein", 1, 1, 2], ["Kronkorken", 1, 2, 2], ["Knochen", 1, 1, 1], ["Sand", 1, 2, 1], ["Nahrung", 3, 6, 1]];
   }
   function p7Erkunden() {
     if (!state || state.dead) return;
@@ -9167,7 +9165,7 @@
       ["Müdigkeit", (s.fatigue || 0) + " %", "Steigt mit jeder Aktion (+3, Kampf +8, Mutanten +1). Ab 80 % weniger Ertrag, bei 100 % keine Aktionen mehr. Schlafen senkt sie."],
       ["Energie", curEnergy(s) + " %", "Sinkt je Aktion (−2, Kampf −6). Unter 40 % weniger Kampfkraft, unter 10 % erschöpft. Schlafen und Tränke füllen sie."],
       ["Strahlenlast", (s.radiation || 0) + " %", "Steigt auf dem Uranfeld (+2 je Aktion). Bei 100 % schwer verletzt. Sinkt nur im Schlaf und mit Strahlentränken (Wiki)."],
-      ["Nahrung / Wasser (Bedarf)", s.food + " / " + s.water, "Sinken mit der Zeit und je Aktion um 1. Unter −10 stirbt der Charakter. Rucksack → essen/trinken füllt auf."],
+      ["Nahrung / Wasser (Vorrat)", s.food + " / " + s.water, "Dein Vorrat. Sinkt automatisch je Minute und je Aktion um 1. Unter −10 stirbt der Charakter (Wiki). Nachschub: Nahrungssuche, Jagen, Wassersuche, Händler."],
       ["Kampferfahrung (KEP)", s.kep || 0, "Aus Kämpfen; schaltet Kampf-Fähigkeiten frei."],
       ["Handelserfahrung (HEP)", s.hep || 0, "+1 je Kauf oder Verkauf."],
       ["Reiseerfahrung (REP)", s.rep || 0, "+1 je 10 gereiste Felder (Wiki)."],
@@ -9458,7 +9456,7 @@
     // Nur Seiten mit Orten werden ganz verlinkt; Ergebnis-Zeilen und Aufgaben-Kasten überall (Zähler wie „(1 von 25)“ bleiben Text)
     return p8TravelBoxHtml() + (P8_COORD_PAGES.includes(origPage) ? p8Coords(h, origPage) : h);
   };
-  const P8_COORD_PAGES = ["erkunden", "graben", "aufgaben", "ereignisse", "postfach", "uebersicht", "laender", "land", "landkarte", "arbeiten", "jagen", "kaempfen", "wassersuche", "gebaeude", "bauoptionen", "stamm"];
+  const P8_COORD_PAGES = ["erkunden", "graben", "aufgaben", "ereignisse", "postfach", "uebersicht", "laender", "land", "landkarte", "arbeiten", "jagen", "kaempfen", "wassersuche", "nahrungssuche", "gebaeude", "bauoptionen", "stamm"];
   const p8GuideBox = p7GuideBoxHtml;
   p7GuideBoxHtml = function () { return p8Coords(p8GuideBox(), "aufgaben"); };
   const p8ExtCmd = extCmd;
@@ -9486,6 +9484,273 @@
     if (box) box.textContent = r.err ? r.err : "Ziel X " + r.x + " · Y " + r.y + ": " + p8TravelCost(r.x, r.y) + ". „Reisen“ zum Prüfen und Bestätigen.";
   });
   window.__p8 = { p8Coords, p8XYLink, p8Go, p8GotoCheck, p8TravelCost, p8FaehigkeitenPage, p8AnimalGallery, get travelUi() { return travelUi; }, get pending() { return p8Pending; } };
+
+  // =====================================================================
+  // Durchgang 9: Nahrung und Wasser sind der Vorrat (automatisch verbraucht), neue Nahrungssuche, mehr Fleisch.
+  // WIKI (Archiv moin/Nahrung.html und moin/Wasser.html, EzWiki 2006): „Hat man weniger als −10 Einheiten Nahrung
+  //   bei sich, so stirbt man.“ Nahrung: Jagd, freie Händler, Farm. Wasser: Wassersuche, freie Händler, Brunnen.
+  //   Moin StartHilfe: „Sterben: nur bei −10 Wasser oder −10 Nahrung.“ Es gab also keinen Essen-Knopf: der Bestand
+  //   an Nahrung/Wasser (rechte Spalte) IST der Bedarf. Das Sammeln von Beeren/Pilzen ist DESIGN (Wunsch aus dem Test).
+  // =====================================================================
+  const P9_ITEM = 8;  // alte Nahrung-/Wasser-Stücke → 8 Vorrat-Einheiten (bisheriger Essen-Wert, DESIGN)
+  const P9_LOW = 20;  // DESIGN: ab hier Warnung
+  const P9_FORAGE_MS = 3000, P9_HUNT_MS = 2500; // DESIGN: ≙ 30 Wiki-Minuten
+  function p9LowCls(v) { return v <= 0 ? "p9-crit" : v <= P9_LOW ? "p9-low" : ""; }
+  /** Spielstand: state.food/state.water werden zu Zugriffen auf inv.Nahrung/inv.Wasser (eine einzige Zahl). */
+  function p9Supply(s) {
+    if (!s || typeof s !== "object") return s;
+    if (!s.inv) s.inv = {};
+    const d = Object.getOwnPropertyDescriptor(s, "food");
+    if (d && d.get) return s;
+    if (!s.p9food) {
+      const f = typeof s.food === "number" ? s.food : 40, w = typeof s.water === "number" ? s.water : 40;
+      const nf = Math.max(0, s.inv.Nahrung || 0), nw = Math.max(0, s.inv.Wasser || 0);
+      s.inv.Nahrung = f + P9_ITEM * nf; s.inv.Wasser = w + P9_ITEM * nw;
+      const conv = (o) => { if (!o) return; ["Nahrung", "Wasser"].forEach((k) => { if (o[k] > 0) o[k] *= P9_ITEM; }); };
+      if (s.house) conv(s.house.lager);
+      if (s.stamm) conv(s.stamm.storage);
+      s.p9food = { at: Date.now(), food: [f, nf], water: [w, nw] }; // Nachweis der Umrechnung
+    }
+    delete s.food; delete s.water;
+    Object.defineProperty(s, "food", { get() { return this.inv.Nahrung || 0; }, set(v) { this.inv.Nahrung = v; }, enumerable: true, configurable: true });
+    Object.defineProperty(s, "water", { get() { return this.inv.Wasser || 0; }, set(v) { this.inv.Wasser = v; }, enumerable: true, configurable: true });
+    return s;
+  }
+  const p9MigrateBase = migrateState;
+  migrateState = function (s) { const r = p9MigrateBase(s); p9Supply(r || s); return r; };
+  function p9(s) { s = s || state; if (!s.p9) s.p9 = {}; if (!Array.isArray(s.p9.hist)) s.p9.hist = []; return s.p9; }
+
+  // --- Neue Beutetiere (DESIGN, Bilder tools/gen_animal_art.py) ---
+  ENEMIES.ratte = { id: "ratte", name: "Mutierte Ratte", img: "assets/gfx/animals/ratte.png", kp: 8, hp: 6, roundsMax: 4, reward: { ep: 1, cp: 1, kep: 1 }, food: [5, 9], animal: true,
+    loot: [{ item: "Knochen", n: [1, 1], w: 60 }, { item: "Kronkorken", n: [1, 2], w: 40 }] };
+  ENEMIES.echse = { id: "echse", name: "Wüstenechse", img: "assets/gfx/animals/echse.png", kp: 11, hp: 8, roundsMax: 5, reward: { ep: 2, cp: 1, kep: 1 }, food: [6, 11], animal: true,
+    loot: [{ item: "Knochen", n: [1, 2], w: 60 }, { item: "Sand", n: [1, 3], w: 40 }] };
+  ENEMIES.wildschwein = { id: "wildschwein", name: "Wildschwein", img: "assets/gfx/animals/wildschwein.png", kp: 24, hp: 16, roundsMax: 6, reward: { ep: 4, cp: 2, kep: 3 }, food: [26, 40], animal: true,
+    loot: [{ item: "Fell", n: [1, 2], w: 50 }, { item: "Knochen", n: [1, 3], w: 50 }] };
+
+  // --- Gelände: was ein Feld zum Essen bietet (alles DESIGN) ---
+  // food = Nahrung je erfolgreichem Sammeln, ok = Erfolgschance, extra = Beifunde [Name, min, max, Gewicht], prey = Wild für die Jagd,
+  // foe/danger = wer beim Sammeln angreifen kann und wie oft, hunt = Chance, Wild aufzuspüren.
+  const P9_TERRAIN = {
+    wald: { n: "Wald", what: "Beeren, Wurzeln, Pilze und Kräuter", food: [6, 14], ok: 0.85, extra: [["Kräuter", 1, 2, 3], ["Holz", 2, 4, 3], ["Pilze", 1, 2, 2], ["Knochen", 1, 1, 1]], prey: ["wild_dog", "wildschwein"], foe: "wild_dog", danger: 0.1, hunt: 0.75 },
+    oase: { n: "Oase", what: "Datteln, Schilfwurzeln und Wasserkresse", food: [5, 12], ok: 0.85, extra: [["Wasser", 4, 10, 4], ["Kräuter", 1, 2, 2], ["Holz", 1, 2, 1]], prey: ["wild_dog"], foe: "wild_dog", danger: 0.08, hunt: 0.6 },
+    steppe: { n: "Steppe / Trockenwiese", what: "Wurzeln, Grassamen und Heuschrecken", food: [3, 8], ok: 0.7, extra: [["Knochen", 1, 2, 2], ["Kräuter", 1, 1, 1], ["Holz", 1, 2, 1]], prey: ["wild_dog", "ratte"], foe: "wild_dog", danger: 0.07, hunt: 0.55 },
+    oedland: { n: "Ödland", what: "zähe Wurzeln und Käfer", food: [2, 6], ok: 0.6, extra: [["Knochen", 1, 2, 2], ["Kronkorken", 1, 2, 2]], prey: ["ratte"], foe: "ratte", danger: 0.06, hunt: 0.45 },
+    ruinen: { n: "Ruinen / Schrott", what: "alte Konserven und Vorratsreste", food: [1, 5], ok: 0.5, extra: [["Kronkorken", 1, 3, 3], ["Metall", 1, 2, 2], ["Kunststoff", 1, 2, 2]], prey: ["ratte"], foe: "scavenger", danger: 0.08, hunt: 0.5 },
+    fels: { n: "Fels / Geröll", what: "Flechten, Moos und Vogeleier", food: [1, 4], ok: 0.45, extra: [["Stein", 1, 3, 3], ["Kronkorken", 1, 1, 1]], prey: ["echse"], foe: "echse", danger: 0.05, hunt: 0.4 },
+    wueste: { n: "Wüste / Dünen", what: "Kaktusfrüchte und Echseneier", food: [0, 3], ok: 0.35, extra: [["Sand", 1, 3, 3], ["Knochen", 1, 1, 1]], prey: ["echse"], foe: "echse", danger: 0.05, hunt: 0.4 },
+    hoehle: { n: "Höhle", what: "Pilze an feuchten Wänden", food: [1, 4], ok: 0.45, extra: [["Pilze", 1, 2, 3], ["Knochen", 1, 2, 1]], prey: ["ratte"], foe: "ratte", danger: 0.08, hunt: 0.4 },
+    glas: { n: "Glasfläche", what: "fast nichts – der Boden ist verbrannt", food: [0, 1], ok: 0.15, extra: [["Kristall", 1, 1, 1], ["Sand", 1, 2, 2]], prey: [], foe: null, danger: 0, hunt: 0 },
+    camp: { n: "Ruinencamp", what: "nichts zu sammeln – der Händler verkauft Nahrung und Wasser", food: [0, 0], ok: 0, extra: [], prey: [], foe: null, danger: 0, hunt: 0 },
+  };
+  const P9_RARE = [["Orangensaft", 1], ["Seife", 1]]; // seltene Gegenstände (2 %)
+  function p9TerrainKey(s) {
+    s = s || state;
+    const pos = p7Pos(s);
+    const pl = placeAt(pos.x, pos.y) || (s.locId && s.locId !== "field" ? locById(s.locId) : null);
+    if (pl) {
+      if (pl.id === "camp") return "camp";
+      const a = pl.actions || [], tags = pl.tags || [];
+      if (a.includes("holz")) return "wald";
+      if (a.includes("wasser")) return "oase";
+      if (a.includes("sand")) return "wueste";
+      if (a.includes("stein")) return "fels";
+      if (tags.includes("Höhle")) return "hoehle";
+      return "ruinen";
+    }
+    const g = groundAt(pos.x, pos.y);
+    if (g === "glas") return "glas";
+    if (g === "hart") return "fels";
+    const n = p7FieldName(pos.x, pos.y);
+    return { Steppe: "steppe", Trockenwiese: "steppe", "Ödland": "oedland", "Geröllfeld": "fels", Ruinenfeld: "ruinen", "Dünen": "wueste" }[n] || "oedland";
+  }
+  function p9Mult(s) {
+    let m = 1 + Math.min(0.5, (s.nv || 0) / 200); // DESIGN: Naturverbundenheit hilft (max +50 %)
+    const pet = activePet(s);
+    if (pet && pet.type === "Wolf" && pet.psi) m *= 2; // WIKI tiere: PSI-Wolf „findet doppelt so viel Nahrung“
+    return m;
+  }
+  function p9Range(s, t) { const m = p9Mult(s); return [Math.floor(t.food[0] * m), Math.floor(t.food[1] * m)]; }
+  function p9ForageCost() { return "Energie −2 · Müdigkeit +" + p7FatAdd("work") + " · Nahrung −1 · Wasser −1 · Dauer " + Math.round(P9_FORAGE_MS / 1000) + " s (≙ 30 Min.)"; }
+  function p9HuntCost() { return "Spurensuche: Energie −2 · Müdigkeit +" + p7FatAdd("work") + " · " + Math.round(P9_HUNT_MS / 1000) + " s · dann Kampf (" + p7CostText("fight").split(" · Niederlage")[0] + ")"; }
+  function p9Start(aid, ms, label, done) {
+    const s = state;
+    if (!s || s.dead) return false;
+    if (sleepUi) { showResult(SLEEP_MSG, true); renderAll(); return false; }
+    if (busy || fight) { showResult("Erst die laufende Aktion beenden.", true); renderAll(); return false; }
+    origPage = "nahrungssuche";
+    if (blockIfExhausted()) return false;
+    busy = true; workUi = { aid, n: 1, i: 0, pct: 0 };
+    clearResults(); setStatus(label + "…"); renderAll();
+    runProgress(ms, () => { workUi = null; busy = false; setProgress(0); setStatus("Bereit."); done(); });
+    return true;
+  }
+  let p9FightRef = null; // Verlaufseintrag, dessen Kampf gerade läuft
+  function p9AddHist(s, e) { const p = p9(s); p.hist.unshift(e); p.hist.length = Math.min(p.hist.length, P7_HIST_MAX); return e; }
+  function p9Forage() {
+    const s = state; const key = p9TerrainKey(s);
+    if (key === "camp") { origPage = "nahrungssuche"; showResult("Im Ruinencamp gibt es nichts zu sammeln. Geh ein Feld weiter (N/O/S/W) oder kauf beim Händler.", true); renderAll(); return; }
+    p9Start("p9forage", P9_FORAGE_MS, "Nahrung sammeln", p9ForageFinish);
+  }
+  function p9ForageFinish() {
+    const s = state; if (!s || s.dead) return;
+    const key = p9TerrainKey(s); const t = P9_TERRAIN[key]; const pos = p7Pos(s);
+    const f0 = s.fatigue || 0, e0 = curEnergy(s), food0 = s.food, before = invSnapshot(s);
+    let msg; let got = 0;
+    if (Math.random() < t.ok) {
+      const r = p9Range(s, t); got = rand(r[0], r[1]);
+      if (got > 0) { addInv(s, "Nahrung", got); msg = "Gesammelt: " + got + " Nahrung (" + t.what + ")."; }
+      else msg = "Kaum etwas Essbares (" + t.what + ").";
+      s.nv = (s.nv || 0) + 1; // DESIGN: Naturverbundenheit (WIKI-Wert) wächst beim Sammeln
+    } else msg = "Nichts Essbares gefunden.";
+    if (t.extra.length && Math.random() < 0.15) {
+      const it = weighted(t.extra.map((x) => ({ item: x[0], n: rand(x[1], x[2]), w: x[3] })));
+      addInv(s, it.item, it.n); msg += " Beifund: " + it.n + "× " + it.item + ".";
+    } else if (key !== "glas" && Math.random() < 0.02) {
+      const it = P9_RARE[rand(0, P9_RARE.length - 1)]; addInv(s, it[0], it[1]); msg += " Seltener Fund: " + it[0] + "!";
+    }
+    gain(s, 1, 0); p7Count("forage");
+    s.food -= 1; s.water -= 1;
+    p7ShowAt = 0; exert("work"); p7Pending = null;
+    msg += afterWork(before);
+    const df = (s.fatigue || 0) - f0, de = curEnergy(s) - e0;
+    const entry = p9AddHist(s, { t: Date.now(), x: pos.x, y: pos.y, f: p7FieldName(pos.x, pos.y), r: msg, c: "Nahrung " + (s.food - food0 >= 0 ? "+" : "−") + Math.abs(s.food - food0) + " netto · Energie " + (de >= 0 ? "+" : "−") + Math.abs(de) + " · Müdigkeit +" + df });
+    let foe = null;
+    if (t.foe && ENEMIES[t.foe] && Math.random() < t.danger) { foe = ENEMIES[t.foe]; msg += " Achtung: " + foe.name + " greift an!"; entry.r = msg; p9FightRef = { entry, foe: foe.id }; }
+    log(msg, got > 0 ? "good" : "bad");
+    origPage = "nahrungssuche";
+    showResult(msg + " · Vorrat Nahrung " + s.food + " · Müdigkeit +" + df + " (jetzt " + (s.fatigue || 0) + " %), Energie " + (de >= 0 ? "+" : "−") + Math.abs(de) + " (jetzt " + curEnergy(s) + " %)", got <= 0);
+    checkDeath(); maybeUnlockTL(); save({ quiet: true }); renderAll();
+    if (foe) setTimeout(() => { if (state && !state.dead && !busy && !fight) startFight(foe.id, "Zufallsbegegnung"); }, 400);
+  }
+  function p9Hunt() {
+    const s = state; const t = P9_TERRAIN[p9TerrainKey(s)];
+    if (!t.prey.length) { origPage = "nahrungssuche"; showResult("Hier gibt es kein Wild. Im Wald, an der Oase und in der Steppe findest du eher etwas.", true); renderAll(); return; }
+    p9Start("p9hunt", P9_HUNT_MS, "Spurensuche", p9HuntFinish);
+  }
+  function p9HuntFinish() {
+    const s = state; if (!s || s.dead) return;
+    const t = P9_TERRAIN[p9TerrainKey(s)]; const pos = p7Pos(s);
+    const f0 = s.fatigue || 0;
+    p7ShowAt = 0; exert("work"); p7Pending = null;
+    const df = (s.fatigue || 0) - f0;
+    if (Math.random() >= t.hunt) {
+      const msg = "Jagd: keine frische Spur gefunden.";
+      p9AddHist(s, { t: Date.now(), x: pos.x, y: pos.y, f: p7FieldName(pos.x, pos.y), r: msg, c: "Energie −2 · Müdigkeit +" + df });
+      log(msg, "bad"); origPage = "nahrungssuche"; showResult(msg + " · Müdigkeit +" + df + " (jetzt " + (s.fatigue || 0) + " %)", true); save({ quiet: true }); renderAll(); return;
+    }
+    const id = weighted(t.prey.map((p, i) => ({ item: p, n: 1, w: i === 0 ? 3 : 1 }))).item; // DESIGN: das erste Tier ist häufiger
+    const e = ENEMIES[id];
+    const msg = "Jagd: Du spürst " + (e.name === "Wildschwein" || e.name === "Wüstenechse" || e.name === "Mutierte Ratte" ? "eine " + (e.name === "Wildschwein" ? "Wildsau" : e.name) : "einen " + e.name) + " auf – Kampf!";
+    const entry = p9AddHist(s, { t: Date.now(), x: pos.x, y: pos.y, f: p7FieldName(pos.x, pos.y), r: msg, c: "Energie −2 · Müdigkeit +" + df + " · dann Kampf" });
+    p9FightRef = { entry, foe: id };
+    log(msg, "sys"); origPage = "nahrungssuche"; showResult(msg); save({ quiet: true }); renderAll();
+    startFight(id, "Jagd");
+  }
+  /** Aus dem Kampf-Sieg aufgerufen: Fleisch/Vorräte in den Vorrat. */
+  function p9FightFood(e) {
+    if (!state || !e || !e.food) return "";
+    const n = rand(e.food[0], e.food[1]); let extra = 0;
+    const pet = activePet(state);
+    if (e.animal && pet && pet.type === "Wolf") extra = pet.psi ? n : Math.floor(n * Math.min(1, pet.groesse / 200) + 0.5); // WIKI: Wolf bis zur doppelten Menge Fleisch
+    addInv(state, "Nahrung", n + extra);
+    if (p9FightRef && p9FightRef.foe === e.id) { p9FightRef.entry.r += " → Sieg: +" + (n + extra) + " Nahrung."; p9FightRef = null; }
+    return " · +" + n + " Nahrung " + (e.animal ? "(Fleisch)" : "(Vorräte)") + (extra ? " + " + extra + " vom Wolf" : "") + " → Vorrat " + state.food;
+  }
+  function p9FightLost(e) { if (p9FightRef && e && p9FightRef.foe === e.id) { p9FightRef.entry.r += " → Niederlage."; p9FightRef = null; } }
+
+  // --- Seiten ---
+  function p9EnemyImg(id) { const e = ENEMIES[id]; return e && e.img ? '<img class="p8-ani s" src="' + e.img + '" alt="' + origEsc(e.name) + '" title="' + origEsc(e.name) + '">' : ""; }
+  function p9Nearest(kind) {
+    const pos = p7Pos(state);
+    const ids = kind === "wald" ? ["wald"] : ["oase"];
+    return LOCATIONS.filter((l) => ids.includes(l.id) && placeOpen(l)).map((l) => ({ l, d: Math.abs(l.x - pos.x) + Math.abs(l.y - pos.y) })).sort((a, b) => a.d - b.d)[0];
+  }
+  function p9SupplyLine() {
+    const s = state;
+    return '<p class="p9-vorrat"><b>Vorrat:</b> <span class="' + p9LowCls(s.food) + '">Nahrung ' + s.food + '</span> · <span class="' + p9LowCls(s.water) + '">Wasser ' + s.water + "</span> " +
+      '<span class="p7-small">(sinkt automatisch je Minute und je Aktion um 1; bei −10 stirbst du)</span></p>';
+  }
+  function p9Page() {
+    const s = state; const key = p9TerrainKey(s); const t = P9_TERRAIN[key]; const p = p9(s);
+    const busyHere = workUi && (workUi.aid === "p9forage" || workUi.aid === "p9hunt");
+    let h = "<h2>Nahrungssuche</h2>" + origLive() +
+      '<div class="p7-pic"><img src="assets/gfx/animals/nahrungssuche.png" alt="Korb mit Beeren, Pilzen und Wurzeln" class="p7-art p9-art"></div>' + p7HereHtml(false) + p9SupplyLine();
+    if (busyHere) h += '<div class="work-row"><p>' + (workUi.aid === "p9hunt" ? "Spurensuche…" : "Nahrung sammeln…") + '</p><div class="work-bar"><i style="width:' + Math.round(workUi.pct || 0) + '%"></i></div></div>';
+    else if (key === "camp") h += '<p class="cant">Im Ruinencamp gibt es nichts zu sammeln oder zu jagen. Geh ein Feld weiter (N/O/S/W) oder kauf beim ' + origLink("Händler", 'data-page="handeln"') + " (1 Gold je Einheit).</p>";
+    else {
+      h += '<p class="p7-btnrow"><a href="#" class="p7-btn" data-x="p9forage">Nahrung sammeln</a> <span class="p7-cost">' + origEsc(p9ForageCost()) + "</span></p>";
+      h += t.prey.length ? '<p class="p7-btnrow"><a href="#" class="p7-btn" data-x="p9hunt">Auf die Jagd gehen</a> <span class="p7-cost">' + origEsc(p9HuntCost()) + "</span></p>"
+        : '<p class="cant">Hier gibt es kein Wild zum Jagen.</p>';
+    }
+    const r = p9Range(s, t);
+    h += '<h3>Was dieses Feld bietet</h3><table class="p7-explain p9-offer"><tr><th>Gelände</th><td><b>' + origEsc(t.n) + "</b></td></tr>";
+    if (key !== "camp") {
+      h += "<tr><th>Sammeln</th><td>" + origEsc(t.what) + ": <b>" + r[0] + "–" + r[1] + " Nahrung</b>, Erfolg " + Math.round(t.ok * 100) + " %" + (p9Mult(s) > 1 ? ' <span class="p7-small">(inkl. Bonus ×' + p9Mult(s).toFixed(2).replace(".", ",") + ")</span>" : "") + "</td></tr>";
+      h += "<tr><th>Beifunde</th><td>" + (t.extra.length ? "15 %: " + origEsc(t.extra.map((x) => x[0]).join(", ")) + " · selten (2 %): Orangensaft, Seife" : "–") + "</td></tr>";
+      h += "<tr><th>Wild</th><td>" + (t.prey.length ? "Spur finden " + Math.round(t.hunt * 100) + " %<br>" + t.prey.map((id) => { const e = ENEMIES[id]; return '<span class="p9-prey">' + p9EnemyImg(id) + "<b>" + origEsc(e.name) + "</b> KP " + e.kp + " · " + e.food[0] + "–" + e.food[1] + " Nahrung</span>"; }).join("") + '<br><span class="p7-small">Deine Kampfkraft: ' + playerKP(s) + " KP</span>" : "keins") + "</td></tr>";
+      h += "<tr><th>Gefahr</th><td>" + (t.foe ? Math.round(t.danger * 100) + " % je Sammeln: " + origEsc(ENEMIES[t.foe].name) + " greift an" : "keine") + "</td></tr>";
+    }
+    h += "</table>";
+    const better = ["wald", "oase"].filter((k) => k !== key).map((k) => p9Nearest(k)).filter(Boolean);
+    if (better.length && key !== "wald") h += "<p>Mehr zu essen: " + better.map((o) => origEsc(o.l.name) + " " + p8XYLink(o.l.x, o.l.y, "nahrungssuche") + ' <span class="p7-small">(' + o.d + " Felder)</span>").join(" · ") + "</p>";
+    h += '<p class="muted">Im Original (EzWiki-Archiv 2006) waren Nahrung und Wasser Ressourcen in der rechten Spalte: Man stirbt unter −10 Einheiten, Nahrung kam von der Jagd, von freien Händlern und der Farm. ' +
+      "Hier geht alles direkt in deinen Vorrat. Sammeln (Beeren, Wurzeln, Pilze) ist DESIGN: Wald und Oase geben viel, Steppe mittel, Ruinen, Fels und Wüste wenig. Naturverbundenheit erhöht die Menge (max. +50 %), ein PSI-Wolf verdoppelt sie (Wiki). " +
+      "Fleisch von Tieren: Wilder Hund 14–22, Wildschwein 26–40, Wüstenechse 6–11, Mutierte Ratte 5–9 (ein Wolf an deiner Seite bringt bis zu doppelt so viel, Wiki).</p>";
+    h += "<h3>Verlauf (letzte " + P7_HIST_MAX + ")</h3>" + p7HistTable(p.hist);
+    return h;
+  }
+  function p9SupplyHtml() {
+    const s = state;
+    const left = (v) => v + 10 > 0 ? "reicht ohne Aktionen noch ca. " + (v + 10) + " Minuten bis −10" : "kritisch";
+    return '<div class="pack p9-supply"><h3>Vorrat</h3>' +
+      '<p class="p9-sup-row"><img src="assets/rohstoffe/nahrung.gif" alt=""> Nahrung <b class="' + p9LowCls(s.food) + '">' + s.food + '</b> <span class="p7-small">' + left(s.food) + "</span></p>" +
+      '<p class="p9-sup-row"><img src="assets/rohstoffe/wasser.gif" alt=""> Wasser <b class="' + p9LowCls(s.water) + '">' + s.water + '</b> <span class="p7-small">' + left(s.water) + "</span></p>" +
+      '<p class="muted">Nahrung und Wasser werden automatisch verbraucht: je Minute und je Aktion (Arbeiten, Reisen, Kämpfen) 1 Einheit. Essen oder Trinken musst du nicht. Bei −10 stirbt der Charakter (Wiki). ' +
+      "Tränke, Pillen und Kräuter mit Wirkung nimmst du weiter selbst (unten bei den Gegenständen).</p>" +
+      "<p>Nachschub: " + origLink("Nahrungssuche", 'data-page="nahrungssuche"') + " · " + origLink("Wassersuche", 'data-page="wassersuche"') + " · " + origLink("Jagen", 'data-page="jagen"') + " · " + origLink("Handeln", 'data-page="handeln"') + "</p></div>";
+  }
+  function p9WarnHtml() {
+    const s = state; if (!s || s.dead) return "";
+    const low = [];
+    if (s.food <= P9_LOW) low.push("Nahrung " + s.food);
+    if (s.water <= P9_LOW) low.push("Wasser " + s.water);
+    if (!low.length) return "";
+    const crit = s.food <= 0 || s.water <= 0;
+    return '<div class="p9-warn' + (crit ? " crit" : "") + '" role="alert"><b>' + (crit ? "Vorrat leer!" : "Vorrat knapp:") + "</b> " + low.join(" · ") + ". Bei −10 stirbst du. " +
+      (s.food <= P9_LOW ? origLink("Nahrungssuche", 'data-page="nahrungssuche"') + " · " : "") + (s.water <= P9_LOW ? origLink("Wassersuche", 'data-page="wassersuche"') + " · " : "") + origLink("Handeln", 'data-page="handeln"') + "</div>";
+  }
+  function p9WarnLog() {
+    const s = state; if (!s || s.dead) return;
+    const p = p9(s);
+    ["food", "water"].forEach((k) => {
+      const v = s[k]; const lvl = v <= 0 ? 2 : v <= P9_LOW ? 1 : 0;
+      const was = (p.warn && p.warn[k]) || 0;
+      if (lvl > was) log((k === "food" ? "Nahrung" : "Wasser") + "-Vorrat " + (lvl === 2 ? "leer" : "knapp") + ": " + v + ". Bei −10 stirbst du.", "bad");
+      p.warn = p.warn || {}; p.warn[k] = lvl;
+    });
+  }
+  const p9RenderOrigPage = renderOrigPage;
+  renderOrigPage = function () {
+    if (!state) return p9RenderOrigPage();
+    p9WarnLog();
+    let h;
+    if (origPage === "nahrungssuche") h = p8TravelBoxHtml() + p8Coords(p9Page(), origPage);
+    else {
+      h = p9RenderOrigPage();
+      if (origPage === "jagen") h = h.replace("</h2>", "</h2>" + p9SupplyLine() + '<p>Fleisch geht direkt in den Vorrat: Wilder Hund 14–22 Nahrung je Sieg. Mehr Wild (Wildschwein, Echse, Ratte) und Sammeln unter ' + origLink("Nahrungssuche", 'data-page="nahrungssuche"') + ".</p>");
+      if (origPage === "wassersuche") h = h.replace("</h2>", "</h2>" + p9SupplyLine() + "<p>Gefundenes Wasser (12–30 Einheiten je Suche) geht direkt in den Vorrat.</p>");
+    }
+    return p9WarnHtml() + h;
+  };
+  const p9ExtCmd = extCmd;
+  extCmd = function (cmd) {
+    const c = String(cmd || "").split("|")[0];
+    if (c === "p9forage") { p9Forage(); return; }
+    if (c === "p9hunt") { p9Hunt(); return; }
+    return p9ExtCmd(cmd);
+  };
+  window.__p9 = { P9_TERRAIN, p9TerrainKey, p9Supply };
 
   document.addEventListener("keydown", (e) => {
     if (!state || state.dead || busy) return;

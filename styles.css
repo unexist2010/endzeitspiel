@@ -1024,3 +1024,30 @@ details.p7-ch li.locked { opacity: 0.7; }
 }
 .mbox a.p8-go, .mbox span.p8-here, .mbox span.p8-lock { display: inline; padding: 0; border: 0; text-transform: none; }
 .p7-guide .p7-prog { white-space: normal; }
+
+/* ===== Durchgang 9: Vorrat, Warnung, Nahrungssuche ===== */
+.p9-warn { margin: 0 0 10px; padding: 8px 10px; border: 1px solid #b8862b; background: rgba(184, 134, 43, 0.16); color: #f0d58a; border-radius: 3px; line-height: 1.5; }
+.p9-warn.crit { border-color: #c0392b; background: rgba(192, 57, 43, 0.2); color: #ffb3a8; }
+.p9-warn a { color: inherit; text-decoration: underline; }
+.p9-low { color: #e8b04a !important; font-weight: bold; }
+.p9-crit { color: #ff6b5b !important; font-weight: bold; }
+.resline.p9-low span:last-child, .resline.p9-crit span:last-child { font-weight: bold; }
+.resline.p9-low span:last-child { color: #e8b04a; }
+.resline.p9-crit span:last-child { color: #ff6b5b; }
+.p9-vorrat { margin: 6px 0; }
+.p9-supply .p9-sup-row { display: flex; align-items: center; gap: 6px; margin: 4px 0; flex-wrap: wrap; }
+.p9-supply .p9-sup-row img { width: 16px; height: 16px; }
+.p9-offer th { white-space: nowrap; vertical-align: top; text-align: left; padding-right: 8px; }
+.p9-offer td { vertical-align: top; }
+.p9-prey { display: inline-flex; align-items: center; gap: 4px; margin: 3px 10px 3px 0; }
+.p9-prey img.p8-ani.s { width: 32px; height: 32px; }
+#m-top .ms-low { color: #e8b04a; font-weight: bold; }
+#m-top .ms-crit { color: #ff6b5b; }
+@media (max-width: 760px) {
+  .p9-offer, .p9-offer tbody, .p9-offer tr { display: block; }
+  .p9-offer th, .p9-offer td { display: block; padding: 2px 0; }
+  .p9-offer th { margin-top: 6px; }
+  .p9-warn a { display: inline-block; min-height: 44px; line-height: 44px; }
+}
+.p7-art.p9-art { width: 150px; image-rendering: auto; }
+@media (max-width: 760px) { .p7-art.p9-art { width: 110px; max-height: 110px; } }

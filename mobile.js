@@ -31,9 +31,13 @@
   function updateTop() {
     var items = [
       ["EP", val(right, "erfahrung")], ["Müde", val(right, "müdigkeit")], ["Energie", val(right, "energie")],
-      ["Strahlung", val(right, "strahlenlast")], ["Essen", val(right, "nahrung")], ["Wasser", val(right, "wasser")], ["Gold", val(right, "gold")],
+      ["Strahlung", val(right, "strahlenlast")], ["Nahrung", val(right, "nahrung")], ["Wasser", val(right, "wasser")], ["Gold", val(right, "gold")],
     ];
-    var html = items.map(function (it) { return '<span class="ms"><b>' + it[0] + "</b>" + it[1] + "</span>"; }).join("");
+    // Durchgang 9: knapper Vorrat (≤ 20) wird markiert
+    var html = items.map(function (it) {
+      var n = parseInt(it[1], 10), low = (it[0] === "Nahrung" || it[0] === "Wasser") && !isNaN(n) && n <= 20;
+      return '<span class="ms' + (low ? (n <= 0 ? " ms-low ms-crit" : " ms-low") : "") + '"><b>' + it[0] + "</b>" + it[1] + "</span>";
+    }).join("");
     // Durchgang 7: aktueller Ort (Name + Koordinaten), Tipp öffnet die Landkarte
     var loc = right.querySelector("a.loc-link");
     if (loc && loc.children.length >= 2) html = '<span class="ms ms-loc" role="link" tabindex="0" aria-label="Landkarte öffnen"><b>Ort</b>' + loc.children[1].textContent.trim() + "</span>" + html;
